@@ -1,0 +1,706 @@
+{
+  "asset_name": "SM_CRT_Scoreboard_v1",
+  "pipeline_version": "1.0.0-v1-testable",
+  "unreal_scale_note": "1.0m in Blender = 100cm in UE5.3 (built for 10x CrapsCrapsCraps table scale)",
+  "coordinate_convention": {
+    "forward": "+X",
+    "right": "+Y",
+    "up": "+Z"
+  },
+  "files": {
+    "blend_file": "C:\\Code\\Unreal Projects\\Craps\\CrapsCrapsCraps\\ArtPipeline\\blend\\CRT_Scoreboard_v1.blend",
+    "blend_size_bytes": 245839,
+    "fbx_file": "C:\\Code\\Unreal Projects\\Craps\\CrapsCrapsCraps\\ArtPipeline\\exports\\SM_CRT_Scoreboard_v1.fbx",
+    "fbx_size_bytes": 380444
+  },
+  "totals_excluding_collision": {
+    "mesh_object_count": 18,
+    "collision_object_count": 1,
+    "total_vertices": 5862,
+    "total_polygons": 6402,
+    "total_triangles": 10752
+  },
+  "collections": {
+    "01_Enclosure_Hull": [
+      "SM_Scoreboard_Cowl_Oxblood",
+      "SM_Scoreboard_Hull_BayLiner",
+      "SM_Scoreboard_Hull_Main"
+    ],
+    "02_Brass_Trim": [
+      "SM_Scoreboard_Bezel_Ante",
+      "SM_Scoreboard_Bezel_Bankroll",
+      "SM_Scoreboard_Bezel_Multiplier",
+      "SM_Scoreboard_Bezel_UnbankedPool",
+      "SM_Scoreboard_Trim_OuterFrame"
+    ],
+    "03_Display_Screens": [
+      "SM_Scoreboard_Screen_Ante",
+      "SM_Scoreboard_Screen_Bankroll",
+      "SM_Scoreboard_Screen_Multiplier",
+      "SM_Scoreboard_Screen_UnbankedPool"
+    ],
+    "04_Mechanical_Details": [
+      "SM_Scoreboard_Mech_ControlSwitches",
+      "SM_Scoreboard_Mech_CornerBolts",
+      "SM_Scoreboard_Mech_SideMounts",
+      "SM_Scoreboard_Mech_StatusLamps_Amber",
+      "SM_Scoreboard_Mech_StatusLamps_Cyan",
+      "SM_Scoreboard_Mech_VentLouvers"
+    ],
+    "05_Collision": [
+      "UCX_SM_Scoreboard_Hull_Main_01"
+    ],
+    "99_Viewport_Preview_Only": [
+      "CAM_Scoreboard_Preview",
+      "LGT_Bounce_FeltTeal",
+      "LGT_Fill_WarmAmberLounge",
+      "LGT_Key_WarmCasinoGold",
+      "LGT_Rim_TopWarm"
+    ],
+    "Asset_CRTScoreboard": []
+  },
+  "objects": [
+    {
+      "name": "SM_Scoreboard_Bezel_Ante",
+      "collections": [
+        "02_Brass_Trim"
+      ],
+      "origin_m": [
+        0.184,
+        0.83,
+        0.985
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 8.4,
+        "y_width": 144.4,
+        "z_height": 49.4
+      },
+      "vertices": 192,
+      "polygons": 208,
+      "triangles": 352,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "Ante"
+    },
+    {
+      "name": "SM_Scoreboard_Bezel_Bankroll",
+      "collections": [
+        "02_Brass_Trim"
+      ],
+      "origin_m": [
+        0.192,
+        -0.81,
+        0.99
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 12.0,
+        "y_width": 156.98,
+        "z_height": 61.29
+      },
+      "vertices": 312,
+      "polygons": 338,
+      "triangles": 572,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "Bankroll"
+    },
+    {
+      "name": "SM_Scoreboard_Bezel_Multiplier",
+      "collections": [
+        "02_Brass_Trim"
+      ],
+      "origin_m": [
+        0.184,
+        0.68,
+        0.4
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 8.4,
+        "y_width": 174.4,
+        "z_height": 48.4
+      },
+      "vertices": 192,
+      "polygons": 208,
+      "triangles": 352,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "Multiplier"
+    },
+    {
+      "name": "SM_Scoreboard_Bezel_UnbankedPool",
+      "collections": [
+        "02_Brass_Trim"
+      ],
+      "origin_m": [
+        0.184,
+        -0.96,
+        0.4
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 8.4,
+        "y_width": 118.4,
+        "z_height": 48.4
+      },
+      "vertices": 192,
+      "polygons": 208,
+      "triangles": 352,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "UnbankedPool"
+    },
+    {
+      "name": "SM_Scoreboard_Cowl_Oxblood",
+      "collections": [
+        "01_Enclosure_Hull"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 56.0,
+        "y_width": 367.2,
+        "z_height": 148.2
+      },
+      "vertices": 312,
+      "polygons": 338,
+      "triangles": 572,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Accent_Oxblood"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Hull_BayLiner",
+      "collections": [
+        "01_Enclosure_Hull"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 13.5,
+        "y_width": 313.2,
+        "z_height": 112.2
+      },
+      "vertices": 888,
+      "polygons": 962,
+      "triangles": 1628,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Cavity_MatteBlack"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Hull_Main",
+      "collections": [
+        "01_Enclosure_Hull"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 54.8,
+        "y_width": 352.0,
+        "z_height": 132.0
+      },
+      "vertices": 480,
+      "polygons": 520,
+      "triangles": 880,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Hull_DarkSteel"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Mech_ControlSwitches",
+      "collections": [
+        "04_Mechanical_Details"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 5.5,
+        "y_width": 22.4,
+        "z_height": 45.36
+      },
+      "vertices": 192,
+      "polygons": 216,
+      "triangles": 320,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Mech_CornerBolts",
+      "collections": [
+        "04_Mechanical_Details"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 5.6,
+        "y_width": 350.4,
+        "z_height": 129.86
+      },
+      "vertices": 402,
+      "polygons": 522,
+      "triangles": 696,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Mech_SideMounts",
+      "collections": [
+        "04_Mechanical_Details"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 28.0,
+        "y_width": 394.5,
+        "z_height": 118.9
+      },
+      "vertices": 448,
+      "polygons": 496,
+      "triangles": 840,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Hull_DarkSteel"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Mech_StatusLamps_Amber",
+      "collections": [
+        "04_Mechanical_Details"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 10.3,
+        "y_width": 175.8,
+        "z_height": 77.6
+      },
+      "vertices": 68,
+      "polygons": 72,
+      "triangles": 112,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Emissive_HighVoltageAmber"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Mech_StatusLamps_Cyan",
+      "collections": [
+        "04_Mechanical_Details"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 10.3,
+        "y_width": 28.8,
+        "z_height": 86.6
+      },
+      "vertices": 104,
+      "polygons": 120,
+      "triangles": 176,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Emissive_PhosphorCyan"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Mech_VentLouvers",
+      "collections": [
+        "04_Mechanical_Details"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 57.0,
+        "y_width": 366.8,
+        "z_height": 119.1
+      },
+      "vertices": 1272,
+      "polygons": 1378,
+      "triangles": 2332,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Hull_DarkSteel"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "SM_Scoreboard_Screen_Ante",
+      "collections": [
+        "03_Display_Screens"
+      ],
+      "origin_m": [
+        0.105,
+        0.83,
+        0.985
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 4.8,
+        "y_width": 138.0,
+        "z_height": 43.0
+      },
+      "vertices": 154,
+      "polygons": 152,
+      "triangles": 304,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Screen_Ante_Amber"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "Ante"
+    },
+    {
+      "name": "SM_Scoreboard_Screen_Bankroll",
+      "collections": [
+        "03_Display_Screens"
+      ],
+      "origin_m": [
+        0.105,
+        -0.81,
+        0.99
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 4.8,
+        "y_width": 142.0,
+        "z_height": 46.0
+      },
+      "vertices": 154,
+      "polygons": 152,
+      "triangles": 304,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Screen_Bankroll_Cyan"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "Bankroll"
+    },
+    {
+      "name": "SM_Scoreboard_Screen_Multiplier",
+      "collections": [
+        "03_Display_Screens"
+      ],
+      "origin_m": [
+        0.105,
+        0.68,
+        0.4
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 4.8,
+        "y_width": 168.0,
+        "z_height": 42.0
+      },
+      "vertices": 154,
+      "polygons": 152,
+      "triangles": 304,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Screen_Multiplier_Amber"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "Multiplier"
+    },
+    {
+      "name": "SM_Scoreboard_Screen_UnbankedPool",
+      "collections": [
+        "03_Display_Screens"
+      ],
+      "origin_m": [
+        0.105,
+        -0.96,
+        0.4
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 4.8,
+        "y_width": 112.0,
+        "z_height": 42.0
+      },
+      "vertices": 154,
+      "polygons": 152,
+      "triangles": 304,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Screen_UnbankedPool_Cyan"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": "UnbankedPool"
+    },
+    {
+      "name": "SM_Scoreboard_Trim_OuterFrame",
+      "collections": [
+        "02_Brass_Trim"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 4.6,
+        "y_width": 351.4,
+        "z_height": 131.4
+      },
+      "vertices": 192,
+      "polygons": 208,
+      "triangles": 352,
+      "ngon_faces": 0,
+      "materials": [
+        "MI_Trim_TarnishedBrass"
+      ],
+      "uv_layers": [
+        "Float2"
+      ],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    },
+    {
+      "name": "UCX_SM_Scoreboard_Hull_Main_01",
+      "collections": [
+        "05_Collision"
+      ],
+      "origin_m": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "dimensions_cm": {
+        "x_depth": 59.0,
+        "y_width": 364.0,
+        "z_height": 142.0
+      },
+      "vertices": 8,
+      "polygons": 6,
+      "triangles": 12,
+      "ngon_faces": 0,
+      "materials": [],
+      "uv_layers": [],
+      "non_manifold_edges": 0,
+      "degenerate_faces": 0,
+      "compartment_id": null
+    }
+  ]
+}

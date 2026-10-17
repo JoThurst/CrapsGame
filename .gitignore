@@ -1,0 +1,68 @@
+# ====================================================================
+# Unreal Engine 5.3 .gitignore
+# Project: CrapsCrapsCraps
+# ====================================================================
+
+# Unreal Engine generated directories
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+
+# Unreal Engine build & packaging artifacts
+*.target
+*.uhtmanifest
+
+# Unreal Engine crash reports and logs
+*.log
+*.dmp
+
+# Visual Studio / Visual Studio Code / IDE generated files
+.vs/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.vcxproj.user
+*.code-workspace
+.vscode/
+
+# JetBrains Rider / CLion
+.idea/
+*.sln.DotSettings.user
+
+# Python virtual environments, caches, and bytecode
+.venv/
+venv/
+ENV/
+env/
+**/__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Blender backup files and autosaves
+*.blend1
+*.blend2
+*.blend3
+*.blend4
+*.blend5
+*.blend@*
+
+# OS temporary / metadata files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Temporary swap / editor scratch files
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
