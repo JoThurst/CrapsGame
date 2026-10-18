@@ -97,6 +97,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Die|Physics")
 	float CockedAlignmentThreshold = 0.92f;
 
+	/** Maximum allowable aggregate COM offset (cm) to prevent unnatural or tumbling glitch artifacts. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Die|Physics", meta = (ClampMin = "0.0", ClampMax = "10.0"))
+	float MaxAllowedCOMOffsetCm = 3.5f;
+
+	/** Additional manual / debug COM offset in die local coordinates (cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Die|Physics")
+	FVector AdditionalLocalCOMOffset = FVector::ZeroVector;
+
 	/** Debug draw pip numbers and socket axes above the die in the Testing Pit. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Die|Debug")
 	bool bDrawDebugFaceOverlay = true;
@@ -154,6 +162,30 @@ public:
 	/** Finds which EDieFaceDirection holds the specified integer pip value (1-6). */
 	UFUNCTION(BlueprintPure, Category = "Craps|Die")
 	bool FindDirectionForFaceValue(int32 TargetValue, EDieFaceDirection& OutDirection) const;
+
+	/** Computes aggregate local-space Center of Mass offset (cm) from all currently equipped faces + AdditionalLocalCOMOffset. */
+	UFUNCTION(BlueprintPure, Category = "Craps|Die|Physics")
+	FVector CalculateAggregateCenterOfMassOffset() const;
+
+	/** Refreshes and applies the aggregate center-of-mass offset to DieMesh's BodyInstance in Chaos physics. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Die|Physics")
+	void UpdateMassAndCenterOfMass();
+
+	/** Equips a UPDA_DiceFace onto the specified directional socket and updates physical mass properties. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Die|Faces")
+	void EquipFaceAsset(EDieFaceDirection Direction, UPDA_DiceFace* FaceAsset);
+
+	/** Removes the equipped UPDA_DiceFace from the specified directional socket and restores default mass properties. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Die|Faces")
+	void UnequipFaceAsset(EDieFaceDirection Direction);
+
+	/** Clears all equipped face assets, restoring pure casino standard dice behavior. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Die|Faces")
+	void ClearAllEquippedFaces();
+
+	/** Returns the current physical Center of Mass offset in local actor space (cm). */
+	UFUNCTION(BlueprintPure, Category = "Craps|Die|Physics")
+	FVector GetLocalCenterOfMass() const;
 
 	/** Computes the world rotation that places DesiredTopFace pointing up (+Z) and DesiredFrontFace pointing forward (+X). */
 	UFUNCTION(BlueprintPure, Category = "Craps|Die")

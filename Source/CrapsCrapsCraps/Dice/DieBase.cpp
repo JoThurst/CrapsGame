@@ -99,6 +99,8 @@ void ADieBase::BeginPlay()
 		DiePhysMat->RestitutionCombineMode = EFrictionCombineMode::Max;
 		DiePhysMat->bOverrideRestitutionCombineMode = true;
 		DieMesh->SetPhysMaterialOverride(DiePhysMat);
+
+		UpdateMassAndCenterOfMass();
 	}
 }
 
@@ -278,6 +280,93 @@ bool ADieBase::FindDirectionForFaceValue(int32 TargetValue, EDieFaceDirection& O
 		}
 	}
 	return false;
+}
+
+FVector ADieBase::CalculateAggregateCenterOfMassOffset() const
+{
+	FVector TotalOffset = AdditionalLocalCOMOffset;
+
+	for (const auto& Pair : EquippedFaceAssets)
+	{
+		const EDieFaceDirection Dir = Pair.Key;
+		const UPDA_DiceFace* Face = Pair.Value;
+		if (Face && !FMath::IsNearlyZero(Face->FaceUpBiasCm))
+		{
+			// Shifting COM toward the opposite face biases THIS face to land UP on the felt.
+			const FVector FaceNormal = GetLocalNormalForDirection(Dir);
+			const FVector OppositeNormal = -FaceNormal;
+			TotalOffset += OppositeNormal * Face->FaceUpBiasCm;
+		}
+	}
+
+	if (MaxAllowedCOMOffsetCm > 0.0f && TotalOffset.Size() > MaxAllowedCOMOffsetCm)
+	{
+		TotalOffset = TotalOffset.GetClampedToMaxSize(MaxAllowedCOMOffsetCm);
+	}
+
+	return TotalOffset;
+}
+
+void ADieBase::UpdateMassAndCenterOfMass()
+{
+	if (!DieMesh)
+	{
+		return;
+	}
+
+	const FVector LocalOffsetCm = CalculateAggregateCenterOfMassOffset();
+	const FVector Scale = DieMesh->GetRelativeScale3D();
+
+	// Unreal BodyUtils multiplies COMNudge by component Scale3D to reach local-space COM.
+	// Therefore COMNudge must be in unscaled mesh space:
+	const FVector AdjustedCOMNudge(
+		FMath::IsNearlyZero(Scale.X) ? 0.0f : LocalOffsetCm.X / Scale.X,
+		FMath::IsNearlyZero(Scale.Y) ? 0.0f : LocalOffsetCm.Y / Scale.Y,
+		FMath::IsNearlyZero(Scale.Z) ? 0.0f : LocalOffsetCm.Z / Scale.Z
+	);
+
+	DieMesh->BodyInstance.COMNudge = AdjustedCOMNudge;
+	DieMesh->BodyInstance.UpdateMassProperties();
+
+	if (DieMesh->IsSimulatingPhysics())
+	{
+		DieMesh->WakeRigidBody();
+	}
+}
+
+void ADieBase::EquipFaceAsset(EDieFaceDirection Direction, UPDA_DiceFace* FaceAsset)
+{
+	if (FaceAsset)
+	{
+		EquippedFaceAssets.FindOrAdd(Direction) = FaceAsset;
+	}
+	else
+	{
+		EquippedFaceAssets.Remove(Direction);
+	}
+	UpdateMassAndCenterOfMass();
+}
+
+void ADieBase::UnequipFaceAsset(EDieFaceDirection Direction)
+{
+	EquippedFaceAssets.Remove(Direction);
+	UpdateMassAndCenterOfMass();
+}
+
+void ADieBase::ClearAllEquippedFaces()
+{
+	EquippedFaceAssets.Empty();
+	AdditionalLocalCOMOffset = FVector::ZeroVector;
+	UpdateMassAndCenterOfMass();
+}
+
+FVector ADieBase::GetLocalCenterOfMass() const
+{
+	if (DieMesh)
+	{
+		return DieMesh->BodyInstance.COMNudge * DieMesh->GetRelativeScale3D();
+	}
+	return FVector::ZeroVector;
 }
 
 FQuat ADieBase::MakeDieOrientation(EDieFaceDirection DesiredTopFace, EDieFaceDirection DesiredFrontFace, float TableYawDegrees)

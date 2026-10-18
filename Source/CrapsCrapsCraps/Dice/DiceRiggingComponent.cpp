@@ -25,7 +25,7 @@ void UDiceRiggingComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 
 	bIsActivelyRigging = false;
 
-	if (DiceControlStat <= KINDA_SMALL_NUMBER)
+	if (!bRiggingEnabled || DiceControlStat <= KINDA_SMALL_NUMBER)
 	{
 		return;
 	}
@@ -75,10 +75,20 @@ void UDiceRiggingComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
 			const float DotAlignment = FVector::DotProduct(CurrentFaceNormal, FVector::UpVector);
 			const float AngleErrorRadians = FMath::Acos(FMath::Clamp(DotAlignment, -1.0f, 1.0f));
 
-			// Proportional-Derivative (PD) angular controller so the die locks onto the target face without overshooting
 			const FVector CurrentAngVelRad = Mesh->GetPhysicsAngularVelocityInRadians();
+			const float CurrentAngSpeed = CurrentAngVelRad.Size();
+
+			// Attenuate rotational acceleration as angular speed approaches MaxAngularVelocityRadPerSec
+			const float SpinAttenuation = FMath::Clamp(1.0f - (CurrentAngSpeed / FMath::Max(1.0f, MaxAngularVelocityRadPerSec)), 0.0f, 1.0f);
+
+			// Smooth out torque when already very close to face up (DotAlignment > 0.92) to prevent jitter
+			const float AlignmentTaper = (DotAlignment > 0.92f)
+				? FMath::Clamp((1.0f - DotAlignment) / 0.08f, 0.0f, 1.0f)
+				: 1.0f;
+
+			// Proportional-Derivative (PD) angular controller so the die locks onto the target face without overshooting
 			const FVector DesiredTorque =
-				(NormalizedAxis * (AngleErrorRadians * MaxTorqueRadiansPerSecSq * ControlStrength))
+				(NormalizedAxis * (AngleErrorRadians * MaxTorqueRadiansPerSecSq * ControlStrength * SpinAttenuation * AlignmentTaper))
 				- (CurrentAngVelRad * (AngularStabilizationDamping * ControlStrength));
 
 			Mesh->AddTorqueInRadians(DesiredTorque, NAME_None, true);

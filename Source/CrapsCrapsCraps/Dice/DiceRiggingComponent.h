@@ -24,6 +24,10 @@ public:
 
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+	/** Master toggle enabling or disabling physics torque rigging assistance. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Rigging")
+	bool bRiggingEnabled = true;
+
 	/**
 	 * Player's Dice Control Stat [0.0 = Pure Chaos RNG, 1.0 = Full Deterministic Torque Lock].
 	 * Controlled by the Testing Pit slider or character/trinket progression.

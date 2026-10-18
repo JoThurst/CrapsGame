@@ -93,7 +93,7 @@ void UThrowStyleComponentBase::ComputePreviewTrajectory_Implementation(
 		const float Time = Step * StepDt;
 		FVector Pos;
 
-		if (LaunchPitchDegrees <= 3.0f)
+		if (Archetype == EThrowArchetype::TableSkimmer || LaunchPitchDegrees <= 4.5f)
 		{
 			// Low-skim glide preview with felt deceleration
 			const float FrictionDecel = FMath::Max(0.20f, 1.0f - (Time * 0.38f));

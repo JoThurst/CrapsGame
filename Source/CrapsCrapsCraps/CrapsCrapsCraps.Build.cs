@@ -32,6 +32,7 @@ public class CrapsCrapsCraps : ModuleRules
 			"EnhancedInput",
 			"GameplayTags",
 			"PhysicsCore",
+			"Chaos",
 			"UMG"
 		});
 

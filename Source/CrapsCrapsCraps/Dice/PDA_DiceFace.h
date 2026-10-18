@@ -54,6 +54,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|DiceFace")
 	FGameplayTagContainer FaceAbilityTags;
 
+	/**
+	 * Center-of-Mass bias in centimeters toward landing face-UP on the felt.
+	 * A positive value (e.g. +1.4cm) shifts the physical center of mass toward the OPPOSITE face,
+	 * statistically favoring this face settling face-UP under Chaos physics.
+	 * Negative values shift COM toward this face (favoring face-DOWN).
+	 * 0.0 = neutral / unweighted.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|DiceFace|Physics", meta = (ClampMin = "-5.0", ClampMax = "5.0"))
+	float FaceUpBiasCm = 0.0f;
+
 	/** Emissive color tint for this face's pips on the 20cm die. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|DiceFace|Visuals")
 	FLinearColor PipEmissiveColor = FLinearColor(0.0f, 0.96f, 0.83f, 1.0f);
