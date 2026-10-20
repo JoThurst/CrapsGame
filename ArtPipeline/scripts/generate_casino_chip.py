@@ -16,15 +16,15 @@ import bmesh
 from mathutils import Vector, Matrix
 
 # ==============================================================================
-# CONFIGURATION (10x SCALE: 1.0 Blender unit = 100 Unreal units / cm)
+# CONFIGURATION (10x SCALE: 1 Unreal unit = 1 cm)
 # ==============================================================================
-CHIP_DIAMETER = 0.39       # 39cm diameter (0.39m)
-CHIP_RADIUS = CHIP_DIAMETER * 0.5  # 0.195m
-CHIP_THICKNESS = 0.034     # 3.4cm thickness (0.034m)
+CHIP_DIAMETER = 39.0       # 39cm diameter
+CHIP_RADIUS = CHIP_DIAMETER * 0.5  # 19.5cm radius
+CHIP_THICKNESS = 3.4       # 3.4cm thickness
 CHIP_HALF_THICK = CHIP_THICKNESS * 0.5
-RIM_WIDTH = 0.032          # 3.2cm outer rim ring
-RIM_INSET_DEPTH = 0.0035   # 3.5mm recessed center well
-BEVEL_RADIUS = 0.003       # 3mm edge chamfer
+RIM_WIDTH = 3.2            # 3.2cm outer rim ring
+RIM_INSET_DEPTH = 0.35     # 3.5mm recessed center well
+BEVEL_RADIUS = 0.3         # 3mm edge chamfer
 SEGMENTS = 64
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
@@ -128,7 +128,6 @@ chip_obj.select_set(True)
 bpy.context.view_layer.objects.active = chip_obj
 
 fbx_export_path = os.path.join(EXPORT_DIR, "SM_CasinoChip_v1.fbx")
-fbx_content_path = os.path.join(CONTENT_DIR, "SM_CasinoChip_v1.fbx")
 
 bpy.ops.export_scene.fbx(
     filepath=fbx_export_path,
@@ -136,12 +135,9 @@ bpy.ops.export_scene.fbx(
     global_scale=1.0,
     axis_forward='-Z',
     axis_up='Y',
-    apply_unit_scale=True,
-    apply_scale_options='FBX_SCALE_ALL',
+    apply_unit_scale=False,
+    apply_scale_options='FBX_SCALE_NONE',
     mesh_smooth_type='FACE'
 )
 
-# Also copy/save directly to Content/Meshes
-import shutil
-shutil.copyfile(fbx_export_path, fbx_content_path)
-print(f"SUCCESS: Exported SM_CasinoChip_v1 to {fbx_export_path} and {fbx_content_path}")
+print(f"SUCCESS: Exported 10x-scale SM_CasinoChip_v1 (39cm) to {fbx_export_path}")

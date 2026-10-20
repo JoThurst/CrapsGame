@@ -12,6 +12,8 @@
 #include "Scoring/ScoringQueueSubsystem.h"
 #include "Table/CrapsGameState.h"
 #include "Table/CrapsFlyingChipActor.h"
+#include "Pawn/CrapsPawn.h"
+#include "Camera/CameraComponent.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 #include "Kismet/GameplayStatics.h"
@@ -478,12 +480,25 @@ void ACrapsTableGrayboxActor::HandleBankedPayoutVisuals(int64 ScoreAmount, int64
 	}
 
 	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
-	const FVector Destination = PlayerPawn 
-		? PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 40.0f)
-		: GetActorLocation() + FVector(0.0f, 0.0f, 150.0f);
+	FVector Destination = GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
+	if (ACrapsPawn* CPawn = Cast<ACrapsPawn>(PlayerPawn))
+	{
+		if (CPawn->POVCamera)
+		{
+			const FVector CamLoc = CPawn->POVCamera->GetComponentLocation();
+			const FVector CamFwd = CPawn->POVCamera->GetForwardVector();
+			const FVector CamRight = CPawn->POVCamera->GetRightVector();
+			const FVector CamUp = CPawn->POVCamera->GetUpVector();
+			Destination = CamLoc + (CamFwd * 50.0f) - (CamRight * 15.0f) - (CamUp * 12.0f);
+		}
+		else
+		{
+			Destination = CPawn->GetActorLocation() + FVector(0.0f, 0.0f, 150.0f);
+		}
+	}
 
-	const FVector Origin = GetActorTransform().TransformPosition(FVector(750.0f, 0.0f, 15.0f));
-	const int32 VisualChips = FMath::Clamp(static_cast<int32>(ScoreAmount / 25) + 4, 6, 18);
+	const FVector Origin = GetActorTransform().TransformPosition(FVector(650.0f, 0.0f, 15.0f));
+	const int32 VisualChips = FMath::Clamp(static_cast<int32>(ScoreAmount / 40) + 6, 8, 22);
 	ACrapsFlyingChipActor::SpawnPayoutCascade(
 		World,
 		Origin,

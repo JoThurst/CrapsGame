@@ -165,6 +165,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UTextRenderComponent> ZoneOddsText = nullptr;
 
+	/** Physical 3D visual chip stack rendered on the felt when PlacedWager > 0. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<class UInstancedStaticMeshComponent> ChipStackMesh = nullptr;
+
 	/** Half extents (cm) of the felt zone on the table plane. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|BetZone")
 	FVector2D ZoneHalfExtent = FVector2D(55.0f, 110.0f);

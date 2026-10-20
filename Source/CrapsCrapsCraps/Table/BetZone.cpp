@@ -3,7 +3,9 @@
 #include "Table/BetZone.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/TextRenderComponent.h"
+#include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "DrawDebugHelpers.h"
 #include "UObject/ConstructorHelpers.h"
@@ -39,6 +41,25 @@ ABetZone::ABetZone()
 	ZoneOddsText->SetupAttachment(ZoneBounds);
 	ZoneOddsText->SetHorizontalAlignment(EHTA_Center);
 	ZoneOddsText->SetVerticalAlignment(EVRTA_TextCenter);
+
+	ChipStackMesh = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("ChipStackMesh"));
+	ChipStackMesh->SetupAttachment(ZoneBounds);
+	ChipStackMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	ChipStackMesh->SetCastShadow(false);
+
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> ChipMeshFinder(
+		TEXT("/Game/Meshes/SM_CasinoChip_v1.SM_CasinoChip_v1"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderMeshFinder(
+		TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
+
+	if (ChipMeshFinder.Succeeded() && ChipMeshFinder.Object)
+	{
+		ChipStackMesh->SetStaticMesh(ChipMeshFinder.Object);
+	}
+	else if (CylinderMeshFinder.Succeeded() && CylinderMeshFinder.Object)
+	{
+		ChipStackMesh->SetStaticMesh(CylinderMeshFinder.Object);
+	}
 
 	if (CubeMeshFinder.Succeeded())
 	{
@@ -125,6 +146,54 @@ void ABetZone::RefreshVisuals()
 	ZoneOddsText->SetTextRenderColor(FColor(235, 240, 250));
 	ZoneOddsText->SetRelativeRotation(TextQuat);
 	ZoneOddsText->SetRelativeLocation(FVector(bReadAlongX ? 0.0f : -OddsSize * 0.7f, bReadAlongX ? OddsSize * 0.7f : 0.0f, 1.2f));
+
+	if (ChipStackMesh)
+	{
+		ChipStackMesh->ClearInstances();
+
+		if (PlacedWager > 0 && ChipStackMesh->GetStaticMesh())
+		{
+			UStaticMesh* Mesh = ChipStackMesh->GetStaticMesh();
+			const FBoxSphereBounds Bounds = Mesh->GetBounds();
+			const float DesiredRadius = 14.0f; // 28cm diameter stack, fits cleanly on all bet zone pads
+			const float ScaleXY = (Bounds.BoxExtent.X > KINDA_SMALL_NUMBER) ? (DesiredRadius / Bounds.BoxExtent.X) : 1.0f;
+			const float DesiredHalfHeight = 1.4f; // 2.8cm per chip
+			const float ScaleZ = (Bounds.BoxExtent.Z > KINDA_SMALL_NUMBER) ? (DesiredHalfHeight / Bounds.BoxExtent.Z) : ScaleXY;
+			const FVector ChipScale(ScaleXY, ScaleXY, ScaleZ);
+
+			const int32 NumChips = FMath::Clamp(static_cast<int32>(PlacedWager / 25), 1, 8);
+			const float StepZ = DesiredHalfHeight * 2.0f;
+
+			for (int32 i = 0; i < NumChips; ++i)
+			{
+				const float JitterYaw = static_cast<float>((i * 37) % 360);
+				const FTransform InstXf(
+					FRotator(0.0f, JitterYaw, 0.0f),
+					FVector(0.0f, 0.0f, 1.5f + (i * StepZ) + DesiredHalfHeight),
+					ChipScale);
+				ChipStackMesh->AddInstance(InstXf);
+			}
+
+			if (UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
+			{
+				const int32 NumMats = FMath::Max(1, Mesh->GetStaticMaterials().Num());
+				for (int32 Slot = 0; Slot < NumMats; ++Slot)
+				{
+					UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMat, this);
+					if (MID)
+					{
+						FLinearColor ChipColor = AccentColor;
+						if (Slot == 1)
+						{
+							ChipColor = FMath::Lerp(AccentColor, FLinearColor::White, 0.4f);
+						}
+						MID->SetVectorParameterValue(TEXT("Color"), ChipColor);
+						ChipStackMesh->SetMaterial(Slot, MID);
+					}
+				}
+			}
+		}
+	}
 }
 
 void ABetZone::BeginPlay()

@@ -8,6 +8,7 @@
 #include "Table/CrapsGameState.h"
 #include "Table/BetZone.h"
 #include "Table/CrapsFlyingChipActor.h"
+#include "Camera/CameraComponent.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Font.h"
@@ -809,8 +810,16 @@ bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bI
 					return true;
 				}
 
-				const FVector PlayerPos = CrapsPawn->GetActorLocation() + CrapsPawn->GetActorForwardVector() * 50.0f + FVector(0.0f, 0.0f, 40.0f);
-				const FVector ZonePos = TargetZone->GetActorLocation() + FVector(0.0f, 0.0f, 12.0f);
+				FVector PlayerPos = CrapsPawn->GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
+				if (CrapsPawn->POVCamera)
+				{
+					const FVector CamLoc = CrapsPawn->POVCamera->GetComponentLocation();
+					const FVector CamFwd = CrapsPawn->POVCamera->GetForwardVector();
+					const FVector CamRight = CrapsPawn->POVCamera->GetRightVector();
+					const FVector CamUp = CrapsPawn->POVCamera->GetUpVector();
+					PlayerPos = CamLoc + (CamFwd * 55.0f) + (CamRight * 28.0f) - (CamUp * 16.0f);
+				}
+				const FVector ZonePos = TargetZone->GetActorLocation() + FVector(0.0f, 0.0f, 14.0f);
 
 				if (!bIsRightClick)
 				{
@@ -821,7 +830,7 @@ bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bI
 						if (CrapsGS->PlaceWager(TargetZone, Denom))
 						{
 							TargetZone->TriggerWinPulse();
-							ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 45.0f, 0.38f, FLinearColor(0.0f, 0.96f, 0.83f));
+							ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 65.0f, 0.58f, FLinearColor(0.0f, 0.96f, 0.83f));
 							CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("BET +$%lld ON %s! Bankroll: $%lld"),
 								Denom, *TargetZone->GetZoneName(), CrapsGS->GetPlayerBankroll()));
 						}
@@ -841,7 +850,7 @@ bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bI
 						int64 Refunded = 0;
 						if (CrapsGS->RemoveWager(TargetZone, Denom, Refunded))
 						{
-							ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 45.0f, 0.38f, FLinearColor(1.0f, 0.72f, 0.01f));
+							ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 65.0f, 0.58f, FLinearColor(1.0f, 0.72f, 0.01f));
 							CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("REFUNDED $%lld FROM %s! Bankroll: $%lld"),
 								Refunded, *TargetZone->GetZoneName(), CrapsGS->GetPlayerBankroll()));
 						}

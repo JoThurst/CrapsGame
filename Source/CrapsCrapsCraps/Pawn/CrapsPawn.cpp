@@ -6,6 +6,7 @@
 #include "Scoring/ScoringQueueSubsystem.h"
 #include "Table/CrapsGameState.h"
 #include "Table/BetZone.h"
+#include "Table/CrapsFlyingChipActor.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "UI/CrapsDebugHUD.h"
 #include "Hazards/TableHazard.h"
@@ -1080,6 +1081,14 @@ void ACrapsPawn::Input_ThrowPress()
 					if (GS->PlaceWager(HoveredBetZone, SelectedChipDenomination))
 					{
 						HoveredBetZone->TriggerWinPulse();
+						const FVector CamLoc = POVCamera ? POVCamera->GetComponentLocation() : GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
+						const FVector CamFwd = POVCamera ? POVCamera->GetForwardVector() : GetActorForwardVector();
+						const FVector CamRight = POVCamera ? POVCamera->GetRightVector() : GetActorRightVector();
+						const FVector CamUp = POVCamera ? POVCamera->GetUpVector() : FVector::UpVector;
+						const FVector PlayerPos = CamLoc + (CamFwd * 55.0f) + (CamRight * 28.0f) - (CamUp * 16.0f);
+						const FVector ZonePos = HoveredBetZone->GetActorLocation() + FVector(0.0f, 0.0f, 14.0f);
+						ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 65.0f, 0.58f, FLinearColor(0.0f, 0.96f, 0.83f));
+
 						GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("BET +$%lld ON %s! Bankroll: $%lld"),
 							SelectedChipDenomination, *HoveredBetZone->GetZoneName(), GS->GetPlayerBankroll()));
 					}
@@ -1301,6 +1310,14 @@ void ACrapsPawn::Input_RightClickPress()
 				int64 Refunded = 0;
 				if (GS->RemoveWager(HoveredBetZone, SelectedChipDenomination, Refunded))
 				{
+					const FVector CamLoc = POVCamera ? POVCamera->GetComponentLocation() : GetActorLocation() + FVector(0.0f, 0.0f, 160.0f);
+					const FVector CamFwd = POVCamera ? POVCamera->GetForwardVector() : GetActorForwardVector();
+					const FVector CamRight = POVCamera ? POVCamera->GetRightVector() : GetActorRightVector();
+					const FVector CamUp = POVCamera ? POVCamera->GetUpVector() : FVector::UpVector;
+					const FVector PlayerPos = CamLoc + (CamFwd * 55.0f) + (CamRight * 28.0f) - (CamUp * 16.0f);
+					const FVector ZonePos = HoveredBetZone->GetActorLocation() + FVector(0.0f, 0.0f, 14.0f);
+					ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 65.0f, 0.58f, FLinearColor(1.0f, 0.72f, 0.01f));
+
 					GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("REFUNDED $%lld FROM %s! Bankroll: $%lld"),
 						Refunded, *HoveredBetZone->GetZoneName(), GS->GetPlayerBankroll()));
 				}

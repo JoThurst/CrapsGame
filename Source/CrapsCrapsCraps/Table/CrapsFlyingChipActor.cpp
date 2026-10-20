@@ -4,6 +4,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Engine/World.h"
+#include "Engine/StaticMesh.h"
 #include "UObject/ConstructorHelpers.h"
 
 ACrapsFlyingChipActor::ACrapsFlyingChipActor()
@@ -21,15 +22,25 @@ ACrapsFlyingChipActor::ACrapsFlyingChipActor()
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> FallbackMeshFinder(
 		TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 
-	if (ChipMeshFinder.Succeeded())
+	UStaticMesh* SelectedMesh = nullptr;
+	if (ChipMeshFinder.Succeeded() && ChipMeshFinder.Object)
 	{
-		ChipMeshComponent->SetStaticMesh(ChipMeshFinder.Object);
-		ChipMeshComponent->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+		SelectedMesh = ChipMeshFinder.Object;
 	}
-	else if (FallbackMeshFinder.Succeeded())
+	else if (FallbackMeshFinder.Succeeded() && FallbackMeshFinder.Object)
 	{
-		ChipMeshComponent->SetStaticMesh(FallbackMeshFinder.Object);
-		ChipMeshComponent->SetRelativeScale3D(FVector(0.26f, 0.26f, 0.035f));
+		SelectedMesh = FallbackMeshFinder.Object;
+	}
+
+	if (SelectedMesh)
+	{
+		ChipMeshComponent->SetStaticMesh(SelectedMesh);
+		const FBoxSphereBounds Bounds = SelectedMesh->GetBounds();
+		const float DesiredRadius = 18.0f; // 36cm diameter (10x casino scale)
+		const float ScaleXY = (Bounds.BoxExtent.X > KINDA_SMALL_NUMBER) ? (DesiredRadius / Bounds.BoxExtent.X) : 1.0f;
+		const float DesiredHalfHeight = 1.7f; // 3.4cm thickness
+		const float ScaleZ = (Bounds.BoxExtent.Z > KINDA_SMALL_NUMBER) ? (DesiredHalfHeight / Bounds.BoxExtent.Z) : ScaleXY;
+		ChipMeshComponent->SetRelativeScale3D(FVector(ScaleXY, ScaleXY, ScaleZ));
 	}
 }
 
@@ -43,26 +54,36 @@ void ACrapsFlyingChipActor::Launch(
 	StartLocation = InStartPos;
 	TargetLocation = InTargetPos;
 	ArcHeight = InArcHeight;
-	TotalDuration = FMath::Max(0.1f, InDuration);
+	TotalDuration = FMath::Max(0.2f, InDuration);
 	ElapsedTime = 0.0f;
 	bIsFlying = true;
 
 	SetActorLocation(StartLocation);
 
-	// Random tumble spin
+	// Gentle random tumble spin
 	TumbleAngularVelocity = FVector(
-		FMath::FRandRange(-720.0f, 720.0f),
-		FMath::FRandRange(-720.0f, 720.0f),
+		FMath::FRandRange(-540.0f, 540.0f),
+		FMath::FRandRange(-540.0f, 540.0f),
 		FMath::FRandRange(-360.0f, 360.0f));
 
 	if (UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
 	{
-		if (!ChipMID)
+		const int32 NumSlots = FMath::Max(1, ChipMeshComponent->GetNumMaterials());
+		for (int32 Slot = 0; Slot < NumSlots; ++Slot)
 		{
-			ChipMID = UMaterialInstanceDynamic::Create(BaseMat, this);
-			ChipMeshComponent->SetMaterial(0, ChipMID);
+			UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMat, this);
+			if (MID)
+			{
+				FLinearColor SlotColor = InColor;
+				if (Slot == 1)
+				{
+					// Inlay face: slightly brighter
+					SlotColor = FMath::Lerp(InColor, FLinearColor::White, 0.4f);
+				}
+				MID->SetVectorParameterValue(TEXT("Color"), SlotColor);
+				ChipMeshComponent->SetMaterial(Slot, MID);
+			}
 		}
-		ChipMID->SetVectorParameterValue(TEXT("Color"), InColor);
 	}
 }
 
@@ -135,21 +156,21 @@ void ACrapsFlyingChipActor::SpawnPayoutCascade(
 		return;
 	}
 
-	const int32 SafeCount = FMath::Clamp(ChipCount, 3, 20);
+	const int32 SafeCount = FMath::Clamp(ChipCount, 4, 24);
 	for (int32 i = 0; i < SafeCount; ++i)
 	{
 		const FVector StaggeredOrigin = OriginPos + FVector(
-			FMath::FRandRange(-40.0f, 40.0f),
-			FMath::FRandRange(-40.0f, 40.0f),
-			FMath::FRandRange(0.0f, 15.0f));
+			FMath::FRandRange(-50.0f, 50.0f),
+			FMath::FRandRange(-50.0f, 50.0f),
+			FMath::FRandRange(0.0f, 20.0f));
 
 		const FVector StaggeredDest = DestinationPos + FVector(
-			FMath::FRandRange(-25.0f, 25.0f),
-			FMath::FRandRange(-25.0f, 25.0f),
+			FMath::FRandRange(-20.0f, 20.0f),
+			FMath::FRandRange(-20.0f, 20.0f),
 			FMath::FRandRange(-10.0f, 10.0f));
 
-		const float Arc = FMath::FRandRange(35.0f, 65.0f);
-		const float Duration = FMath::FRandRange(0.35f, 0.58f);
+		const float Arc = FMath::FRandRange(55.0f, 85.0f);
+		const float Duration = FMath::FRandRange(0.60f, 0.85f);
 
 		SpawnChip(World, StaggeredOrigin, StaggeredDest, Arc, Duration, Color);
 	}
