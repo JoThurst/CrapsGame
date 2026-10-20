@@ -70,6 +70,10 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Components")
 	TObjectPtr<class UPointLightComponent> PitOverheadLight;
 
+	/** Left-Hand Trinket Inventory managing equipped Rings, Wristwear, and Rail Props (Milestone 3.1 & 3.2). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Components")
+	TObjectPtr<class UTrinketInventoryComponent> TrinketInventory;
+
 	//~ 4 Modular Throw Style Components (Hot-Swappable via F1-F4)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|ThrowStyles")
 	TObjectPtr<UThrowStyle_TableSkimmer> ThrowStyle_TableSkimmer;
@@ -268,6 +272,27 @@ public:
 	/** Sets active chip denomination directly. */
 	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Betting")
 	void SetChipDenomination(int64 NewDenomination);
+
+	//~ Left-Hand Equipment & Trinket Sockets (Milestone 3.1 & 3.2)
+	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|Trinkets")
+	class UTrinketInventoryComponent* GetTrinketInventory() const { return TrinketInventory; }
+
+	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|Trinkets")
+	FVector GetFingerKnuckleWorldLocation(int32 FingerIndex) const;
+
+	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|Trinkets")
+	FVector GetWristWorldLocation() const;
+
+	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|Trinkets")
+	FVector GetRailPropWorldLocation(int32 PropIndex) const;
+
+	/** Initializes or resets the starter Trinket loadout on the Left Hand (Milestones 3.1 & 3.2). */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Trinkets")
+	void InitializeDefaultTrinketLoadout();
+
+	/** Toggles or refreshes the starter Trinket loadout (J key). */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Trinkets")
+	void Input_ToggleStarterTrinkets();
 
 protected:
 	virtual void BeginPlay() override;

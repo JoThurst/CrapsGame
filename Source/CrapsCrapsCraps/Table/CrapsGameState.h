@@ -90,6 +90,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Craps|GameState")
 	void RegisterBetZone(ABetZone* BetZone);
 
+	/** Binds a specific TrinketInventoryComponent (used by tests or pawn initialization). */
+	UFUNCTION(BlueprintCallable, Category = "Craps|GameState")
+	void BindTrinketInventory(class UTrinketInventoryComponent* InTrinketInventory);
+
+	/** Returns active TrinketInventoryComponent (either bound or resolved from PlayerPawn). */
+	UFUNCTION(BlueprintPure, Category = "Craps|GameState")
+	class UTrinketInventoryComponent* GetActiveTrinketInventory() const;
+
 	// --- Public Accessors ---
 
 	UFUNCTION(BlueprintPure, Category = "Craps|GameState")
@@ -203,4 +211,8 @@ protected:
 	/** True while a roll is actively resolving. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|State")
 	bool bIsResolvingRoll = false;
+
+	/** Bound Left-Hand Trinket Inventory component (Milestone 3.1 & 3.2). */
+	UPROPERTY(Transient)
+	TWeakObjectPtr<class UTrinketInventoryComponent> BoundTrinketInventory;
 };

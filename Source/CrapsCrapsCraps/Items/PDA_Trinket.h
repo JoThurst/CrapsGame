@@ -63,6 +63,50 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Visuals")
 	TObjectPtr<UTexture2D> Icon = nullptr;
 
+	/** If true, this trinket applies distinct bonuses for Odd vs. Even roll sums (e.g. Neon Signet). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	bool bSplitOddEven = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	float OddSumThrowMult = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	int32 EvenSumBaseChips = 0;
+
+	/** If true, this trinket scales bonuses per table/bumper bounce (e.g. Brass Knuckles). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	bool bScaleWithBounces = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	int32 ChipsPerBounce = 0;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	float ThrowMultPerBounce = 0.0f;
+
+	/** If true, rolling 7 with enough hazards converts Seven-Out into a Miracle Seven (e.g. Onyx Claw). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	bool bIsMiracleSevenTrinket = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	int32 MinHazardsForMiracleSeven = 2;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Trinket|Special")
+	int32 MiracleSevenBonusChips = 150;
+
+	/** Evaluates whether this trinket triggers under the current roll context, producing an FScoringStep if so. */
+	virtual bool EvaluateTrinket(
+		const FRollEvaluationContext& Context,
+		FScoringStep& OutScoringStep,
+		int32& OutBonusBaseChips,
+		float& OutBonusThrowMult,
+		float& OutBetMultFactor) const;
+
+	/** Checks if this trinket averts Seven-Out (Miracle Seven). */
+	virtual bool CheckMiracleSevenAverted(
+		const FRollEvaluationContext& Context,
+		FScoringStep& OutScoringStep,
+		int32& OutBonusBaseChips) const;
+
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override
 	{
 		return FPrimaryAssetId(TEXT("Trinket"), GetFName());

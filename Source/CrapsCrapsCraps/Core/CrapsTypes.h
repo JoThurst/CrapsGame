@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "CrapsTypes.generated.h"
 
 class ADieBase;
@@ -210,6 +211,57 @@ struct CRAPSCRAPSCRAPS_API FScoringStep
 	/** Sequential audio pitch index (+1 semitone per step, wrapping/clamping at +24). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
 	int32 AudioPitchIndex = 0;
+};
+
+/**
+ * Contextual state of a settled throw passed into Trinkets and Scoring steps for synergy evaluation.
+ */
+USTRUCT(BlueprintType)
+struct CRAPSCRAPSCRAPS_API FRollEvaluationContext
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	int32 Die1Value = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	int32 Die2Value = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	int32 RollSum = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	bool bIsHardway = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	bool bHitBackWall = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	int32 TotalBounces = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	int32 MidRollHazardsHit = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	ECrapsTablePhase TablePhase = ECrapsTablePhase::ComeOutRoll;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	int32 EstablishedPoint = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	bool bPointHit = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	bool bSevenOut = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	bool bNatural = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	bool bCraps = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Evaluation")
+	FGameplayTagContainer TriggerTags;
 };
 
 

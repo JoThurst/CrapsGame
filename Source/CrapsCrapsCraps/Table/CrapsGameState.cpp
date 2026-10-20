@@ -5,6 +5,8 @@
 #include "EngineUtils.h"
 #include "Scoring/ScoringQueueSubsystem.h"
 #include "Table/BetZone.h"
+#include "Items/TrinketInventoryComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ACrapsGameState::ACrapsGameState()
 {
@@ -37,6 +39,27 @@ void ACrapsGameState::RegisterBetZone(ABetZone* BetZone)
 	}
 }
 
+void ACrapsGameState::BindTrinketInventory(UTrinketInventoryComponent* InTrinketInventory)
+{
+	BoundTrinketInventory = InTrinketInventory;
+}
+
+UTrinketInventoryComponent* ACrapsGameState::GetActiveTrinketInventory() const
+{
+	if (BoundTrinketInventory.IsValid())
+	{
+		return BoundTrinketInventory.Get();
+	}
+	if (UWorld* World = GetWorld())
+	{
+		if (APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0))
+		{
+			return PlayerPawn->FindComponentByClass<UTrinketInventoryComponent>();
+		}
+	}
+	return nullptr;
+}
+
 void ACrapsGameState::ResolveSettledRoll(
 	int32 Die1FaceValue,
 	int32 Die1ChipYield,
@@ -57,73 +80,151 @@ void ACrapsGameState::ResolveSettledRoll(
 	UWorld* World = GetWorld();
 	UScoringQueueSubsystem* ScoringQueue = World ? World->GetSubsystem<UScoringQueueSubsystem>() : nullptr;
 
+	// Build contextual roll state for Trinket and Synergy evaluation
+	FRollEvaluationContext Context;
+	Context.Die1Value = Die1FaceValue;
+	Context.Die2Value = Die2FaceValue;
+	Context.RollSum = RollSum;
+	Context.bIsHardway = bIsHardway;
+	Context.bHitBackWall = bHitBackWall;
+	Context.TotalBounces = TotalWallBounces;
+	Context.TablePhase = PreRollPhase;
+	Context.EstablishedPoint = PreRollPoint;
+	Context.bSevenOut = (PreRollPhase == ECrapsTablePhase::PointEstablished && RollSum == 7);
+	Context.bPointHit = (PreRollPhase == ECrapsTablePhase::PointEstablished && RollSum == PreRollPoint);
+	Context.bNatural = (PreRollPhase == ECrapsTablePhase::ComeOutRoll && (RollSum == 7 || RollSum == 11));
+	Context.bCraps = (PreRollPhase == ECrapsTablePhase::ComeOutRoll && (RollSum == 2 || RollSum == 3 || RollSum == 12));
+	Context.MidRollHazardsHit = ScoringQueue ? ((ScoringQueue->RunningBaseChips > 0) ? FMath::Max(1, ScoringQueue->RunningBaseChips / 30) : 0) : 0;
+
+	if (RollSum % 2 != 0)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnOddSum"), false));
+	}
+	else
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnEvenSum"), false));
+	}
+	if (bIsHardway)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnHardway"), false));
+	}
+	if (Context.bNatural)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnNatural"), false));
+	}
+	if (Context.bCraps)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnCraps"), false));
+	}
+	if (Context.bPointHit)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnPointHit"), false));
+	}
+	if (RollSum == 7)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnSeven"), false));
+	}
+	if (bHitBackWall)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnWallBounce"), false));
+	}
+	if (TotalWallBounces > 0)
+	{
+		Context.TriggerTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnAnyBounce"), false));
+	}
+
+	UTrinketInventoryComponent* TrinketComp = GetActiveTrinketInventory();
 
 	// Check for Seven-Out during PointEstablished
 	if (PreRollPhase == ECrapsTablePhase::PointEstablished && RollSum == 7)
 	{
-		// 1. Wipe exposed unbanked combo pool from previous rolls
-		UnbankedComboPool = 0;
-		ConsecutivePointsHit = 0;
-		CurrentPhase = ECrapsTablePhase::ComeOutRoll;
-		EstablishedPoint = 0;
+		// Check for Miracle Seven aversion via equipped Trinket (e.g. Onyx Claw)
+		FScoringStep MiracleStep;
+		int32 MiracleChips = 0;
+		const bool bMiracleAverted = TrinketComp && TrinketComp->CheckMiracleSevenAverted(Context, MiracleStep, MiracleChips);
 
-		int64 DontPassWinnings = 0;
-		TArray<FScoringStep> DontPassSteps;
-
-		// 2. Evaluate all active bets; losing bets clear, winning Don't Pass pays and clears
-		for (ABetZone* Zone : ActiveBetZones)
+		if (!bMiracleAverted)
 		{
-			if (!Zone)
+			// 1. Wipe exposed unbanked combo pool from previous rolls
+			UnbankedComboPool = 0;
+			ConsecutivePointsHit = 0;
+			CurrentPhase = ECrapsTablePhase::ComeOutRoll;
+			EstablishedPoint = 0;
+
+			int64 DontPassWinnings = 0;
+			TArray<FScoringStep> DontPassSteps;
+
+			// 2. Evaluate all active bets; losing bets clear, winning Don't Pass pays and clears
+			for (ABetZone* Zone : ActiveBetZones)
 			{
-				continue;
+				if (!Zone)
+				{
+					continue;
+				}
+
+				FScoringStep ZoneStep;
+				bool bShouldClear = false;
+				const bool bWon = Zone->EvaluateRoll(Die1FaceValue, Die2FaceValue, PreRollPhase, PreRollPoint, ZoneStep, bShouldClear);
+				if (bWon && Zone->GetBetType() == ECrapsBetType::DontPass)
+				{
+					DontPassWinnings += ZoneStep.BaseChipDelta;
+					DontPassSteps.Add(ZoneStep);
+				}
+
+				if (bShouldClear)
+				{
+					Zone->ClearWager();
+				}
 			}
 
-			FScoringStep ZoneStep;
-			bool bShouldClear = false;
-			const bool bWon = Zone->EvaluateRoll(Die1FaceValue, Die2FaceValue, PreRollPhase, PreRollPoint, ZoneStep, bShouldClear);
-			if (bWon && Zone->GetBetType() == ECrapsBetType::DontPass)
+			// 3. Authoritatively preserve valid Don't Pass winnings in the pool
+			UnbankedComboPool = DontPassWinnings;
+
+			LastRollOutcomeBanner = FString::Printf(
+				TEXT("SEVEN-OUT! (%d+%d=7) — Exposed Pool Wiped! Don't Pass Won: +%lld Chips. Puck -> OFF"),
+				Die1FaceValue,
+				Die2FaceValue,
+				DontPassWinnings);
+
+			// 4. Enqueue presentation steps for visual feedback
+			if (ScoringQueue)
 			{
-				DontPassWinnings += ZoneStep.BaseChipDelta;
-				DontPassSteps.Add(ZoneStep);
+				FScoringStep SevenOutStep;
+				SevenOutStep.StepLabel = TEXT("SEVEN-OUT! EXPOSED POOL WIPED");
+				SevenOutStep.Layer = EScoringLayer::SevenOut;
+				SevenOutStep.PopupWorldLocation = (Die1Location + Die2Location) * 0.5f + FVector(0.0f, 0.0f, 40.0f);
+				ScoringQueue->EnqueueScoringStep(SevenOutStep);
+
+				for (const FScoringStep& Step : DontPassSteps)
+				{
+					ScoringQueue->EnqueueScoringStep(Step);
+				}
+
+				ScoringQueue->StartEndOfRollResolution(true);
 			}
 
-			if (bShouldClear)
-			{
-				Zone->ClearWager();
-			}
+			bIsResolvingRoll = false;
+			OnTablePhaseChanged.Broadcast(CurrentPhase, EstablishedPoint);
+			OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
+			OnRollSettledAuthoritative.Broadcast(Die1FaceValue, Die2FaceValue, DontPassWinnings);
+			return;
 		}
-
-		// 3. Authoritatively preserve valid Don't Pass winnings in the pool
-		UnbankedComboPool = DontPassWinnings;
-
-		LastRollOutcomeBanner = FString::Printf(
-			TEXT("SEVEN-OUT! (%d+%d=7) — Exposed Pool Wiped! Don't Pass Won: +%lld Chips. Puck -> OFF"),
-			Die1FaceValue,
-			Die2FaceValue,
-			DontPassWinnings);
-
-		// 4. Enqueue presentation steps for visual feedback
-		if (ScoringQueue)
+		else
 		{
-			FScoringStep SevenOutStep;
-			SevenOutStep.StepLabel = TEXT("SEVEN-OUT! EXPOSED POOL WIPED");
-			SevenOutStep.Layer = EScoringLayer::SevenOut;
-			SevenOutStep.PopupWorldLocation = (Die1Location + Die2Location) * 0.5f + FVector(0.0f, 0.0f, 40.0f);
-			ScoringQueue->EnqueueScoringStep(SevenOutStep);
+			// Miracle Seven! Puck stays ON, Point remains established, wagers not wiped
+			LastRollOutcomeBanner = FString::Printf(
+				TEXT("MIRACLE SEVEN! (+%d Chips) — Seven-Out Averted! Chasing Point [%d]"),
+				MiracleChips, PreRollPoint);
 
-			for (const FScoringStep& Step : DontPassSteps)
+			if (ScoringQueue)
 			{
-				ScoringQueue->EnqueueScoringStep(Step);
+				MiracleStep.PopupWorldLocation = (Die1Location + Die2Location) * 0.5f + FVector(0.0f, 0.0f, 40.0f);
+				ScoringQueue->EnqueueScoringStep(MiracleStep);
 			}
 
-			ScoringQueue->StartEndOfRollResolution(true);
+			Die1ChipYield += (MiracleChips / 2);
+			Die2ChipYield += (MiracleChips - (MiracleChips / 2));
 		}
-
-		bIsResolvingRoll = false;
-		OnTablePhaseChanged.Broadcast(CurrentPhase, EstablishedPoint);
-		OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
-		OnRollSettledAuthoritative.Broadcast(Die1FaceValue, Die2FaceValue, DontPassWinnings);
-		return;
 	}
 
 	// --- 1. Compute Authoritative Base Chips and Throw Multipliers ---
@@ -148,6 +249,24 @@ void ACrapsGameState::ResolveSettledRoll(
 		}
 	}
 	float AuthBetMult = 1.0f;
+
+	// Integrate Left-Hand Trinket synergies (Milestone 3.1 & 3.2)
+	int32 TrinketBonusChips = 0;
+	float TrinketBonusThrowMult = 0.0f;
+	float TrinketBetMultFactor = 1.0f;
+	if (TrinketComp)
+	{
+		TrinketComp->EvaluateTrinketsForRoll(
+			Context,
+			ScoringQueue,
+			TrinketBonusChips,
+			TrinketBonusThrowMult,
+			TrinketBetMultFactor);
+	}
+
+	AuthBaseChips += TrinketBonusChips;
+	AuthThrowMult += TrinketBonusThrowMult;
+	AuthBetMult *= TrinketBetMultFactor;
 
 	// Enqueue Presentation Layer 1 & Layer 2 steps
 	if (ScoringQueue)

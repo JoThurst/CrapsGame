@@ -8,6 +8,7 @@
 #include "Table/BetZone.h"
 #include "Table/CrapsFlyingChipActor.h"
 #include "Progression/RunProgressionSubsystem.h"
+#include "Items/TrinketInventoryComponent.h"
 #include "UI/CrapsDebugHUD.h"
 #include "Hazards/TableHazard.h"
 #include "Camera/CameraComponent.h"
@@ -87,6 +88,9 @@ ACrapsPawn::ACrapsPawn()
 	ThrowStyle_BackWallWhip = CreateDefaultSubobject<UThrowStyle_BackWallWhip>(TEXT("ThrowStyle_BackWallWhip"));
 	ThrowStyle_MechanicalPlunger = CreateDefaultSubobject<UThrowStyle_MechanicalPlunger>(TEXT("ThrowStyle_MechanicalPlunger"));
 
+	// Left-Hand Trinket Inventory
+	TrinketInventory = CreateDefaultSubobject<UTrinketInventoryComponent>(TEXT("TrinketInventory"));
+
 	DieClass = ADieBase::StaticClass();
 
 	EnableRemotePythonBridge();
@@ -145,6 +149,8 @@ void ACrapsPawn::BeginPlay()
 		InputMode.SetHideCursorDuringCapture(false);
 		PC->SetInputMode(InputMode);
 	}
+
+	InitializeDefaultTrinketLoadout();
 }
 
 void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -230,6 +236,9 @@ void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 
 	// Toggle Debug HUD (H key)
 	PlayerInputComponent->BindKey(EKeys::H, IE_Pressed, this, &ACrapsPawn::Input_ToggleHUDHelp);
+
+	// Milestone 3: Toggle / Re-equip Starter Trinket Loadout (J key)
+	PlayerInputComponent->BindKey(EKeys::J, IE_Pressed, this, &ACrapsPawn::Input_ToggleStarterTrinkets);
 
 	// Clear uncommitted wagers back to bankroll (Backspace / Delete)
 	PlayerInputComponent->BindKey(EKeys::BackSpace, IE_Pressed, this, &ACrapsPawn::Input_ClearBets);
@@ -476,6 +485,36 @@ void ACrapsPawn::Tick(float DeltaTime)
 			DrawDebugLine(World, LeftPalmPos, KnucklePos, FColor(0, 245, 212), false, -1.0f, 0, 2.0f);
 			DrawDebugLine(World, KnucklePos, TipPos, FColor(0, 245, 212), false, -1.0f, 0, 2.0f);
 			DrawDebugSphere(World, KnucklePos, 3.5f, 8, FColor(255, 0, 127), false, -1.0f, 0, 1.8f);
+		}
+
+		// Render equipped Trinkets on Left-Hand sockets (Milestone 3.1 & 3.2)
+		if (TrinketInventory)
+		{
+			// Wristwear
+			if (UPDA_Trinket* WristTrinket = TrinketInventory->GetEquippedTrinket(ETrinketSlotType::WristwearActive, 0))
+			{
+				DrawDebugSphere(World, LeftWristPos + FVector(0.0f, 0.0f, 7.0f), 8.0f, 16, FColor(255, 215, 0), false, -1.0f, 0, 3.0f);
+			}
+
+			// 4 Finger Rings
+			for (int32 FingerIdx = 0; FingerIdx < 4; ++FingerIdx)
+			{
+				if (UPDA_Trinket* RingTrinket = TrinketInventory->GetEquippedTrinket(ETrinketSlotType::FingerRing, FingerIdx))
+				{
+					const FVector KnucklePos = GetFingerKnuckleWorldLocation(FingerIdx);
+					DrawDebugSphere(World, KnucklePos, 5.0f, 12, FColor(0, 245, 212), false, -1.0f, 0, 2.5f);
+				}
+			}
+
+			// 2 Rail Props
+			for (int32 PropIdx = 0; PropIdx < 2; ++PropIdx)
+			{
+				if (UPDA_Trinket* PropTrinket = TrinketInventory->GetEquippedTrinket(ETrinketSlotType::RailProp, PropIdx))
+				{
+					const FVector PropPos = GetRailPropWorldLocation(PropIdx);
+					DrawDebugBox(World, PropPos, FVector(6.0f, 6.0f, 8.0f), LeftHandQ, FColor(255, 0, 128), false, -1.0f, 0, 2.5f);
+				}
+			}
 		}
 
 		// 2. RIGHT HAND ACTIVE SHOOTER RIG (transforms per archetype and pulls back with throw power)
@@ -1455,4 +1494,116 @@ void ACrapsPawn::UpdateCursorHoverRaycast()
 			HoveredBetZone->SetHovered(true);
 		}
 	}
+}
+
+FVector ACrapsPawn::GetFingerKnuckleWorldLocation(int32 FingerIndex) const
+{
+	const float FingerY = -58.0f + (FMath::Clamp(FingerIndex, 0, 3) * 7.0f);
+	return PawnLocalToWorld(FVector(45.0f, FingerY, 126.0f));
+}
+
+FVector ACrapsPawn::GetWristWorldLocation() const
+{
+	return PawnLocalToWorld(FVector(10.0f, -60.0f, 135.0f));
+}
+
+FVector ACrapsPawn::GetRailPropWorldLocation(int32 PropIndex) const
+{
+	const float PropX = (PropIndex == 0) ? -10.0f : -25.0f;
+	return PawnLocalToWorld(FVector(PropX, -65.0f, 125.0f));
+}
+
+void ACrapsPawn::Input_ToggleStarterTrinkets()
+{
+	if (!TrinketInventory)
+	{
+		return;
+	}
+
+	if (TrinketInventory->GetEquippedCount() > 0)
+	{
+		TrinketInventory->ClearAllTrinkets();
+		if (UWorld* World = GetWorld())
+		{
+			if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+			{
+				GS->SetLastRollOutcomeBanner(TEXT("TRINKETS UNEQUIPPED — Press [J] to Re-equip Starter Rig"));
+			}
+		}
+	}
+	else
+	{
+		InitializeDefaultTrinketLoadout();
+		if (UWorld* World = GetWorld())
+		{
+			if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+			{
+				GS->SetLastRollOutcomeBanner(TEXT("STARTER TRINKETS EQUIPPED! (Neon Signet • Cobalt Band • Brass Knuckles • Whiskey)"));
+			}
+		}
+	}
+}
+
+void ACrapsPawn::InitializeDefaultTrinketLoadout()
+{
+	if (!TrinketInventory || TrinketInventory->GetEquippedCount() > 0)
+	{
+		return;
+	}
+
+	// 1. Neon Signet (Ring 0): Odd sum -> +4.0x Throw Mult, Even sum -> +40 Base Chips
+	UPDA_Trinket* NeonSignet = Cast<UPDA_Trinket>(StaticLoadObject(UPDA_Trinket::StaticClass(), nullptr, TEXT("/Game/Data/Trinkets/DA_Trinket_NeonSignet")));
+	if (!NeonSignet)
+	{
+		NeonSignet = NewObject<UPDA_Trinket>(this, TEXT("Starter_NeonSignet"));
+		NeonSignet->TrinketName = FText::FromString(TEXT("Neon Signet"));
+		NeonSignet->Description = FText::FromString(TEXT("Odd sums grant +4.0x Throw Mult; Even sums grant +40 Base Chips."));
+		NeonSignet->SlotType = ETrinketSlotType::FingerRing;
+		NeonSignet->bSplitOddEven = true;
+		NeonSignet->OddSumThrowMult = 4.0f;
+		NeonSignet->EvenSumBaseChips = 40;
+	}
+	TrinketInventory->EquipTrinket(NeonSignet, 0);
+
+	// 2. Cobalt Band (Ring 1): Symmetric Hardway pairs double active Horn & Field multipliers
+	UPDA_Trinket* CobaltBand = Cast<UPDA_Trinket>(StaticLoadObject(UPDA_Trinket::StaticClass(), nullptr, TEXT("/Game/Data/Trinkets/DA_Trinket_CobaltBand")));
+	if (!CobaltBand)
+	{
+		CobaltBand = NewObject<UPDA_Trinket>(this, TEXT("Starter_CobaltBand"));
+		CobaltBand->TrinketName = FText::FromString(TEXT("Cobalt Band"));
+		CobaltBand->Description = FText::FromString(TEXT("Symmetric Hardways double active Horn and Field multipliers (x2.0 Bet Mult)."));
+		CobaltBand->SlotType = ETrinketSlotType::FingerRing;
+		CobaltBand->TriggerConditionTag = FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnHardway"), false);
+		CobaltBand->TargetScoringLayer = EScoringLayer::BetMult;
+		CobaltBand->BetMultFactor = 2.0f;
+	}
+	TrinketInventory->EquipTrinket(CobaltBand, 1);
+
+	// 3. Brass Knuckle Band (Wristwear): +20 chips, +0.25x mult per bounce
+	UPDA_Trinket* BrassKnuckles = Cast<UPDA_Trinket>(StaticLoadObject(UPDA_Trinket::StaticClass(), nullptr, TEXT("/Game/Data/Trinkets/DA_Trinket_BrassKnuckleBand")));
+	if (!BrassKnuckles)
+	{
+		BrassKnuckles = NewObject<UPDA_Trinket>(this, TEXT("Starter_BrassKnuckles"));
+		BrassKnuckles->TrinketName = FText::FromString(TEXT("Brass Knuckle Band"));
+		BrassKnuckles->Description = FText::FromString(TEXT("+20 Base Chips and +0.25x Throw Mult per table bounce."));
+		BrassKnuckles->SlotType = ETrinketSlotType::WristwearActive;
+		BrassKnuckles->bScaleWithBounces = true;
+		BrassKnuckles->ChipsPerBounce = 20;
+		BrassKnuckles->ThrowMultPerBounce = 0.25f;
+	}
+	TrinketInventory->EquipTrinket(BrassKnuckles, 0);
+
+	// 4. Whiskey Tumbler (Rail Prop 0): Point streak multiplier booster
+	UPDA_Trinket* Whiskey = Cast<UPDA_Trinket>(StaticLoadObject(UPDA_Trinket::StaticClass(), nullptr, TEXT("/Game/Data/Trinkets/DA_Trinket_WhiskeyTumbler")));
+	if (!Whiskey)
+	{
+		Whiskey = NewObject<UPDA_Trinket>(this, TEXT("Starter_WhiskeyTumbler"));
+		Whiskey->TrinketName = FText::FromString(TEXT("Whiskey Tumbler"));
+		Whiskey->Description = FText::FromString(TEXT("Hot Shooter point streaks have their bonus multiplier increased by +50%."));
+		Whiskey->SlotType = ETrinketSlotType::RailProp;
+		Whiskey->TriggerConditionTag = FGameplayTag::RequestGameplayTag(TEXT("Craps.Trigger.OnPointHit"), false);
+		Whiskey->TargetScoringLayer = EScoringLayer::PointBonus;
+		Whiskey->BetMultFactor = 1.5f;
+	}
+	TrinketInventory->EquipTrinket(Whiskey, 0);
 }

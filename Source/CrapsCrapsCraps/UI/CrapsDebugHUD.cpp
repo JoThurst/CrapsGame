@@ -10,6 +10,8 @@
 #include "Table/CrapsFlyingChipActor.h"
 #include "Camera/CameraComponent.h"
 #include "Progression/RunProgressionSubsystem.h"
+#include "Items/TrinketInventoryComponent.h"
+#include "Items/PDA_Trinket.h"
 #include "Engine/Canvas.h"
 #include "Engine/Font.h"
 #include "Engine/Engine.h"
@@ -281,6 +283,31 @@ void ACrapsDebugHUD::DrawHUD()
 			? FString::Printf(TEXT("PUCK [ON %d]  |  %s"), CrapsGS->GetEstablishedPoint(), *CrapsGS->GetLastRollOutcomeBanner())
 			: FString::Printf(TEXT("PUCK [OFF] COME-OUT  |  %s"), *CrapsGS->GetLastRollOutcomeBanner());
 		DrawScoreRow(PuckText, bPointOn ? GoldColor : CyanColor, 0.88f);
+
+		if (CrapsPawn)
+		{
+			if (UTrinketInventoryComponent* Trinkets = CrapsPawn->GetTrinketInventory())
+			{
+				const int32 EquippedCount = Trinkets->GetEquippedCount();
+				if (EquippedCount > 0)
+				{
+					FString TrinketSummary = FString::Printf(TEXT("TRINKETS (%d/7): "), EquippedCount);
+					TArray<UPDA_Trinket*> AllTrinkets = Trinkets->GetAllEquippedTrinkets();
+					for (int32 i = 0; i < AllTrinkets.Num(); ++i)
+					{
+						if (AllTrinkets[i])
+						{
+							TrinketSummary += AllTrinkets[i]->TrinketName.ToString();
+							if (i < AllTrinkets.Num() - 1)
+							{
+								TrinketSummary += TEXT(" • ");
+							}
+						}
+					}
+					DrawScoreRow(TrinketSummary, MagentaColor, 0.82f);
+				}
+			}
+		}
 	}
 
 	// Compact Inline 3-Layer Scoring Pill (shown below card during scoring)
