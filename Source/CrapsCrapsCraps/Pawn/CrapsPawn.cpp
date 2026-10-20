@@ -606,6 +606,20 @@ void ACrapsPawn::RequestStickmanPushBack()
 			}
 		}
 	}
+	else
+	{
+		// Auto-bank unbanked combo winnings before the dice are returned to the shooter
+		if (UWorld* World = GetWorld())
+		{
+			if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+			{
+				if (GS->bAutoBankOnNextRoll && GS->GetUnbankedPool() > 0)
+				{
+					GS->BankUnbankedPool();
+				}
+			}
+		}
+	}
 
 	bIsChargingThrow = false;
 	StickmanPushElapsed = 0.0f;
@@ -928,6 +942,18 @@ void ACrapsPawn::CommitThrow()
 	if (CurrentPhase != ECrapsThrowPhase::OnFeltSetting && CurrentPhase != ECrapsThrowPhase::ThrowCharging)
 	{
 		return;
+	}
+
+	// Safety check: ensure any unbanked pool is authoritatively secured before dice leave the shooter's hand
+	if (UWorld* World = GetWorld())
+	{
+		if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+		{
+			if (GS->bAutoBankOnNextRoll && GS->GetUnbankedPool() > 0)
+			{
+				GS->BankUnbankedPool();
+			}
+		}
 	}
 
 	EnsureDiceSpawned();

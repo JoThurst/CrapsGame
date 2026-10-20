@@ -213,4 +213,28 @@ bool FCrapsBettingBoardToggleTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// 7. Test AutoBankOnNextRoll Economy Flag & Safe Redundant Banking
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsAutoBankEconomyFlagTest, "Craps.InteractiveBetting.AutoBankEconomyFlag", EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+bool FCrapsAutoBankEconomyFlagTest::RunTest(const FString& Parameters)
+{
+	ACrapsGameState* GS = NewObject<ACrapsGameState>();
+	TestTrue(TEXT("AutoBankOnNextRoll defaults to true"), GS->bAutoBankOnNextRoll);
+
+	GS->SetPlayerBankroll(500);
+	GS->SetUnbankedPool(600);
+
+	// Bank pool
+	const int64 Banked = GS->BankUnbankedPool();
+	TestEqual(TEXT("Secured full 600 score"), Banked, 600LL);
+	TestEqual(TEXT("Pool is now 0"), GS->GetUnbankedPool(), 0LL);
+	TestEqual(TEXT("Bankroll increased by min dividend 25 or 5% (500 + 30 = 530)"), GS->GetPlayerBankroll(), 530LL);
+
+	// Subsequent redundant bank call while pool is 0 returns 0 safely
+	const int64 RedundantBanked = GS->BankUnbankedPool();
+	TestEqual(TEXT("Redundant bank returns 0"), RedundantBanked, 0LL);
+	TestEqual(TEXT("Bankroll remains intact at 530"), GS->GetPlayerBankroll(), 530LL);
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

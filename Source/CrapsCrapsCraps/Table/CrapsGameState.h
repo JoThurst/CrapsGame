@@ -154,6 +154,14 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
 	int64 MinCashDividendPerBank = 25;
 
+	/**
+	 * If true, any unbanked combo pool is automatically secured into Ante Progress and Cash Bankroll
+	 * when the stickman pushes the dice back to the shooter (or before committing a new throw).
+	 * Eliminates cognitive friction and prevents accidental roll wipeout while preserving manual [F] banking.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	bool bAutoBankOnNextRoll = true;
+
 protected:
 	virtual void BeginPlay() override;
 
