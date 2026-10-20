@@ -35,4 +35,54 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Craps|UI")
 	void ToggleStreamlinedHUD() { bStreamlinedHUD = !bStreamlinedHUD; }
+
+	/** Toggle the interactive synth-noir betting board panel (Key B / Tab). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|UI")
+	bool bBettingBoardOpen = false;
+
+	UFUNCTION(BlueprintCallable, Category = "Craps|UI")
+	void ToggleBettingBoard() { bBettingBoardOpen = !bBettingBoardOpen; }
+
+	UFUNCTION(BlueprintCallable, Category = "Craps|UI")
+	void SetBettingBoardOpen(bool bOpen) { bBettingBoardOpen = bOpen; }
+
+	UFUNCTION(BlueprintPure, Category = "Craps|UI")
+	bool IsBettingBoardOpen() const { return bBettingBoardOpen; }
+
+	/** Handles mouse click on the betting board overlay. Returns true if consumed. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|UI")
+	bool HandleBettingBoardClick(const FVector2D& ScreenPos, bool bIsRightClick);
+
+protected:
+	enum class EBetBoardActionType : uint8
+	{
+		BetSlot,
+		PressAll,
+		ClearBets,
+		BankPool,
+		Close
+	};
+
+	struct FCrapsBetSlotClickArea
+	{
+		EBetBoardActionType ActionType = EBetBoardActionType::BetSlot;
+		ECrapsBetType BetType = ECrapsBetType::PassLine;
+		FString DisplayName;
+		float X = 0.0f;
+		float Y = 0.0f;
+		float W = 0.0f;
+		float H = 0.0f;
+	};
+
+	TArray<FCrapsBetSlotClickArea> CachedBetSlotClickAreas;
+	FVector2D CachedPanelTopLeft = FVector2D::ZeroVector;
+	FVector2D CachedPanelSize = FVector2D::ZeroVector;
+
+	void DrawBettingBoard(
+		UWorld* World,
+		class ACrapsPawn* CrapsPawn,
+		class ACrapsGameState* CrapsGS,
+		class URunProgressionSubsystem* Progression,
+		UFont* Font,
+		float UiScale);
 };

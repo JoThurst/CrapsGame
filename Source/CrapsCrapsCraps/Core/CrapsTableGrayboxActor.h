@@ -115,6 +115,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Craps|Table|Delegates")
 	void HandleBankrollChanged(int64 NewBankroll, int64 NewUnbankedPool);
 
+	UFUNCTION(BlueprintCallable, Category = "Craps|Table|Delegates")
+	void HandleBankedPayoutVisuals(int64 ScoreAmount, int64 CashAmount);
+
 	UFUNCTION()
 	void HandleScoringStepExecuted(const FScoringStep& Step, int32 RunningBaseChips, float RunningThrowMult, float RunningBetMult, float NormalizedMultiplierIntensity);
 

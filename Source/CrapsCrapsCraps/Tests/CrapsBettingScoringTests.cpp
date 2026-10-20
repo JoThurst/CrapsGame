@@ -297,6 +297,7 @@ bool FCrapsAuthoritativeScoringTest::RunTest(const FString& Parameters)
 	PassZone->InitializeZone(ECrapsBetType::PassLine, TEXT("PASS LINE"), 2.0f, 50);
 	GS->RegisterBetZone(PassZone);
 
+	GS->bEnableScoreCashSeparation = false; // Unified bankroll test
 	GS->SetPlayerBankroll(500);
 	GS->PlaceWager(PassZone, 50);
 	TestEqual(TEXT("Bankroll is 450 after wager"), GS->GetPlayerBankroll(), 450LL);

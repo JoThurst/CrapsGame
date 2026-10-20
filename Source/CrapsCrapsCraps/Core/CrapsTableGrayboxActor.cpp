@@ -11,8 +11,10 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Scoring/ScoringQueueSubsystem.h"
 #include "Table/CrapsGameState.h"
+#include "Table/CrapsFlyingChipActor.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "Kismet/GameplayStatics.h"
 #include "TimerManager.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -395,6 +397,9 @@ void ACrapsTableGrayboxActor::BindToGameState(ACrapsGameState* GS)
 	GS->OnBankrollChanged.RemoveDynamic(this, &ACrapsTableGrayboxActor::HandleBankrollChanged);
 	GS->OnBankrollChanged.AddDynamic(this, &ACrapsTableGrayboxActor::HandleBankrollChanged);
 
+	GS->OnBankedPayoutVisuals.RemoveDynamic(this, &ACrapsTableGrayboxActor::HandleBankedPayoutVisuals);
+	GS->OnBankedPayoutVisuals.AddDynamic(this, &ACrapsTableGrayboxActor::HandleBankedPayoutVisuals);
+
 	int64 DisplayAnteQuota = GS->GetCurrentAnteQuota();
 	if (UWorld* World = GetWorld())
 	{
@@ -462,6 +467,29 @@ void ACrapsTableGrayboxActor::HandleBankrollChanged(int64 NewBankroll, int64 New
 				GS->GetEstablishedPoint());
 		}
 	}
+}
+
+void ACrapsTableGrayboxActor::HandleBankedPayoutVisuals(int64 ScoreAmount, int64 CashAmount)
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(World, 0);
+	const FVector Destination = PlayerPawn 
+		? PlayerPawn->GetActorLocation() + FVector(0.0f, 0.0f, 40.0f)
+		: GetActorLocation() + FVector(0.0f, 0.0f, 150.0f);
+
+	const FVector Origin = GetActorTransform().TransformPosition(FVector(750.0f, 0.0f, 15.0f));
+	const int32 VisualChips = FMath::Clamp(static_cast<int32>(ScoreAmount / 25) + 4, 6, 18);
+	ACrapsFlyingChipActor::SpawnPayoutCascade(
+		World,
+		Origin,
+		Destination,
+		VisualChips,
+		FLinearColor(1.0f, 0.72f, 0.01f));
 }
 
 void ACrapsTableGrayboxActor::HandleScoringStepExecuted(

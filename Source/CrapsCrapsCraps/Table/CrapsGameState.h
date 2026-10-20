@@ -13,6 +13,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnTablePhaseChanged, ECrapsTablePh
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBankrollChanged, int64, NewBankroll, int64, NewUnbankedPool);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnRollSettledAuthoritative, int32, Die1Value, int32, Die2Value, int64, AuthoritativePayout);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnWinningsSecured, int64, SecuredWinningsAmount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnBankedPayoutVisualsSignature, int64, ScoreAmount, int64, CashAmount);
 
 /**
  * Authoritative Craps Table State Machine and Economy Tracker.
@@ -132,6 +133,26 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Craps|GameState")
 	FOnWinningsSecured OnWinningsSecured;
+
+	UPROPERTY(BlueprintAssignable, Category = "Craps|GameState")
+	FOnBankedPayoutVisualsSignature OnBankedPayoutVisuals;
+
+	/**
+	 * Option B Economy Toggle (Default = true):
+	 * Separates Balatro combo score (filling Ante Progress) from Spendable Cash ($).
+	 * If set to false, Option A (Unified Bankroll) is active where all combo chips are spendable.
+	 * Option A is preserved in docs and comments for future exploration / high-roller mode.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	bool bEnableScoreCashSeparation = true;
+
+	/** Cash dividend percentage (e.g. 0.05 = 5% of combo score) awarded to spendable bankroll on banking. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	float ScoreToCashDividendRatio = 0.05f;
+
+	/** Minimum cash dividend awarded when banking a winning unbanked pool. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 MinCashDividendPerBank = 25;
 
 protected:
 	virtual void BeginPlay() override;

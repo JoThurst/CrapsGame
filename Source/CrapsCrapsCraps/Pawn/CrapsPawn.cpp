@@ -158,10 +158,14 @@ void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	// Stickman Recall / Reset
 	PlayerInputComponent->BindKey(EKeys::R, IE_Pressed, this, &ACrapsPawn::RequestStickmanPushBack);
 
-	// Cycle Setting Method (Q) & Select Left/Right/Both Die (E) & Cycle Throw Input Mode (Tab)
+	// Cycle Setting Method (Q) & Select Left/Right/Both Die (E) & Cycle Throw Input Mode (Y)
 	PlayerInputComponent->BindKey(EKeys::Q, IE_Pressed, this, &ACrapsPawn::CycleDiceSetMethod);
 	PlayerInputComponent->BindKey(EKeys::E, IE_Pressed, this, &ACrapsPawn::Input_SelectDieCycle);
-	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ACrapsPawn::CycleThrowInputMode);
+	PlayerInputComponent->BindKey(EKeys::Y, IE_Pressed, this, &ACrapsPawn::CycleThrowInputMode);
+
+	// Interactive Synth-Noir Betting Board Toggle (B & Tab)
+	PlayerInputComponent->BindKey(EKeys::B, IE_Pressed, this, &ACrapsPawn::Input_ToggleBettingBoard);
+	PlayerInputComponent->BindKey(EKeys::Tab, IE_Pressed, this, &ACrapsPawn::Input_ToggleBettingBoard);
 
 	// On-Felt Finger-Tip 90-Degree Rotations (WASD / Arrow Keys / Z / C)
 	PlayerInputComponent->BindKey(EKeys::W, IE_Pressed, this, &ACrapsPawn::Input_PitchUp);
@@ -179,9 +183,9 @@ void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	PlayerInputComponent->BindKey(EKeys::MouseScrollUp, IE_Pressed, this, &ACrapsPawn::Input_MouseWheelUp);
 	PlayerInputComponent->BindKey(EKeys::MouseScrollDown, IE_Pressed, this, &ACrapsPawn::Input_MouseWheelDown);
 
-	// Holographic Preset Snaps (V / B / N keys, freeing 1/2/3/4 for Throw Archetypes so F1-F4 never trigger UE Editor Wireframe/Unlit viewmodes!)
+	// Holographic Preset Snaps (V / K / N keys, freeing 1/2/3/4 for Throw Archetypes)
 	PlayerInputComponent->BindKey(EKeys::V, IE_Pressed, this, &ACrapsPawn::Input_Preset1);
-	PlayerInputComponent->BindKey(EKeys::B, IE_Pressed, this, &ACrapsPawn::Input_Preset2);
+	PlayerInputComponent->BindKey(EKeys::K, IE_Pressed, this, &ACrapsPawn::Input_Preset2);
 	PlayerInputComponent->BindKey(EKeys::N, IE_Pressed, this, &ACrapsPawn::Input_Preset3);
 
 	// 4 Hot-Swappable Throw Archetypes bound to BOTH 1/2/3/4 AND NumPad 1/2/3/4 (and F1-F4 for standalone builds)
@@ -1023,6 +1027,25 @@ void ACrapsPawn::Input_ArchetypeF4() { SetActiveThrowArchetype(EThrowArchetype::
 
 void ACrapsPawn::Input_ThrowPress()
 {
+	// If the Betting Board is open, route click to HUD overlay (prevents throwing)
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
+		{
+			if (HUD->IsBettingBoardOpen())
+			{
+				FVector2D MousePos;
+				if (PC->GetMousePosition(MousePos.X, MousePos.Y))
+				{
+					if (HUD->HandleBettingBoardClick(MousePos, false))
+					{
+						return; // Consumed by Betting Board!
+					}
+				}
+			}
+		}
+	}
+
 	if (UWorld* World = GetWorld())
 	{
 		if (URunProgressionSubsystem* Progression = World->GetSubsystem<URunProgressionSubsystem>())
@@ -1233,8 +1256,37 @@ void ACrapsPawn::CycleShooterStation(int32 Direction)
 void ACrapsPawn::Input_StationNext() { CycleShooterStation(1); }
 void ACrapsPawn::Input_StationPrev() { CycleShooterStation(-1); }
 
+void ACrapsPawn::Input_ToggleBettingBoard()
+{
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
+		{
+			HUD->ToggleBettingBoard();
+		}
+	}
+}
+
 void ACrapsPawn::Input_RightClickPress()
 {
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
+		{
+			if (HUD->IsBettingBoardOpen())
+			{
+				FVector2D MousePos;
+				if (PC->GetMousePosition(MousePos.X, MousePos.Y))
+				{
+					if (HUD->HandleBettingBoardClick(MousePos, true))
+					{
+						return; // Consumed by Betting Board!
+					}
+				}
+			}
+		}
+	}
+
 	if (CurrentPhase != ECrapsThrowPhase::OnFeltSetting || !HoveredBetZone)
 	{
 		return;
@@ -1305,6 +1357,25 @@ void ACrapsPawn::Input_CycleDenominationDown()
 
 void ACrapsPawn::UpdateCursorHoverRaycast()
 {
+	APlayerController* PC = Cast<APlayerController>(GetController());
+
+	// If betting board is open, do not raycast or hover 3D table zones
+	if (PC)
+	{
+		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
+		{
+			if (HUD->IsBettingBoardOpen())
+			{
+				if (HoveredBetZone)
+				{
+					HoveredBetZone->SetHovered(false);
+					HoveredBetZone = nullptr;
+				}
+				return;
+			}
+		}
+	}
+
 	if (CurrentPhase != ECrapsThrowPhase::OnFeltSetting)
 	{
 		if (HoveredBetZone)
@@ -1315,7 +1386,6 @@ void ACrapsPawn::UpdateCursorHoverRaycast()
 		return;
 	}
 
-	APlayerController* PC = Cast<APlayerController>(GetController());
 	if (!PC)
 	{
 		return;

@@ -104,7 +104,7 @@ bool FCrapsProgressionBankingSecuresWinningsTest::RunTest(const FString& Paramet
 	const int64 Banked = GS->BankUnbankedPool();
 	TestEqual(TEXT("Banked amount is 400"), Banked, 400LL);
 	TestEqual(TEXT("Unbanked pool is emptied to 0"), GS->GetUnbankedPool(), 0LL);
-	TestEqual(TEXT("Player bankroll increases by 400 (500 + 400 = 900)"), GS->GetPlayerBankroll(), 900LL);
+	TestEqual(TEXT("Player bankroll receives Option B cash dividend (500 + $25 = 525)"), GS->GetPlayerBankroll(), 525LL);
 	TestEqual(TEXT("Ante progress awarded 400 qualifying winnings"), Subsystem->GetCurrentAnteProgress(), 400LL);
 
 	// If player has unbanked chips and a Seven-Out occurs, unbanked pool is wiped and NO ante progress is gained
@@ -201,7 +201,7 @@ bool FCrapsProgressionAdvanceToNextAnteTest::RunTest(const FString& Parameters)
 	// Meet Ante 1 quota (1000)
 	GS->SetUnbankedPool(1000);
 	GS->BankUnbankedPool();
-	TestEqual(TEXT("Bankroll is 1450"), GS->GetPlayerBankroll(), 1450LL);
+	TestEqual(TEXT("Bankroll is 500 under Option B (450 + 50 cash dividend)"), GS->GetPlayerBankroll(), 500LL);
 	TestEqual(TEXT("State is AnteCleared"), (uint8)Subsystem->GetRunState(), (uint8)ERunProgressionState::AnteCleared);
 
 	// Advance to Ante 2
@@ -215,7 +215,7 @@ bool FCrapsProgressionAdvanceToNextAnteTest::RunTest(const FString& Parameters)
 
 	// Field wager of 50 was legitimately refunded on ante advancement
 	TestEqual(TEXT("Field wager reset to 0"), FieldZone->GetPlacedWager(), 0LL);
-	TestEqual(TEXT("Bankroll preserved and refunded (1450 + 50 = 1500)"), GS->GetPlayerBankroll(), 1500LL);
+	TestEqual(TEXT("Bankroll preserved and refunded (500 + 50 = 550)"), GS->GetPlayerBankroll(), 550LL);
 
 	return true;
 }

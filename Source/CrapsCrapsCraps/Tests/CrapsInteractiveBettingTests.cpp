@@ -6,6 +6,7 @@
 #include "Table/BetZone.h"
 #include "Pawn/CrapsPawn.h"
 #include "Core/CrapsTableGrayboxActor.h"
+#include "UI/CrapsDebugHUD.h"
 #include "Engine/World.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
@@ -161,6 +162,53 @@ bool FCrapsDealerPuckMobilityTest::RunTest(const FString& Parameters)
 		TestEqual(TEXT("Puck X coordinate parked is 65.0"), LocOff.X, 65.0);
 		TestEqual(TEXT("Puck Y coordinate parked is 180.0"), LocOff.Y, 180.0);
 	}
+
+	return true;
+}
+
+// 5. Test Option B Economy Separation (Score vs. Cash Bankroll)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsOptionBEconomySeparationTest, "Craps.InteractiveBetting.OptionBEconomySeparation", EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+bool FCrapsOptionBEconomySeparationTest::RunTest(const FString& Parameters)
+{
+	ACrapsGameState* GS = NewObject<ACrapsGameState>();
+	GS->SetPlayerBankroll(500);
+	GS->SetUnbankedPool(10000); // Massive 10k combo roll
+
+	// Option B enabled (default): 5% cash dividend, min $25
+	GS->bEnableScoreCashSeparation = true;
+	GS->ScoreToCashDividendRatio = 0.05f;
+	GS->MinCashDividendPerBank = 25;
+
+	const int64 SecuredScore = GS->BankUnbankedPool();
+
+	TestEqual(TEXT("Secured score for Ante Progress is full 10,000 chips"), SecuredScore, 10000LL);
+	TestEqual(TEXT("Unbanked pool is reset to 0"), GS->GetUnbankedPool(), 0LL);
+	// Bankroll was 500 + 5% of 10000 (500) = 1000 (NOT 10500!)
+	TestEqual(TEXT("Bankroll increased by 5% cash dividend (500 + 500 = 1000)"), GS->GetPlayerBankroll(), 1000LL);
+
+	// Test Option A fallback mode (Context Preserved)
+	GS->SetPlayerBankroll(500);
+	GS->SetUnbankedPool(2000);
+	GS->bEnableScoreCashSeparation = false;
+
+	GS->BankUnbankedPool();
+	TestEqual(TEXT("Option A unified bankroll receives 100% of score (500 + 2000 = 2500)"), GS->GetPlayerBankroll(), 2500LL);
+
+	return true;
+}
+
+// 6. Test Betting Board Open/Close Toggle State
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsBettingBoardToggleTest, "Craps.InteractiveBetting.BettingBoardToggle", EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+bool FCrapsBettingBoardToggleTest::RunTest(const FString& Parameters)
+{
+	ACrapsDebugHUD* HUD = NewObject<ACrapsDebugHUD>();
+	TestFalse(TEXT("Betting board defaults to closed"), HUD->IsBettingBoardOpen());
+
+	HUD->ToggleBettingBoard();
+	TestTrue(TEXT("Betting board toggles to open"), HUD->IsBettingBoardOpen());
+
+	HUD->SetBettingBoardOpen(false);
+	TestFalse(TEXT("Betting board sets to closed"), HUD->IsBettingBoardOpen());
 
 	return true;
 }

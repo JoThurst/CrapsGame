@@ -320,6 +320,7 @@ private:
 	void Input_AdvanceAnte();
 	void Input_RestartRun();
 	void Input_ToggleHUDHelp();
+	void Input_ToggleBettingBoard();
 	void Input_ClearBets();
 
 	float StickmanPushElapsed = 0.0f;

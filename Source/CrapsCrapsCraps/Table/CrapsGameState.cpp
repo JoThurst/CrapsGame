@@ -328,13 +328,36 @@ int64 ACrapsGameState::BankUnbankedPool()
 		return 0;
 	}
 
-	const int64 BankedAmount = UnbankedComboPool;
-	PlayerBankroll += BankedAmount;
+	const int64 BankedScore = UnbankedComboPool;
+
+	// Option B: Score Chips vs. Spendable Bankroll Separation.
+	// 1. Authoritative combo score chips are deposited into Ante Progress
+	OnWinningsSecured.Broadcast(BankedScore);
+
+	// 2. Spendable Bankroll calculation:
+	int64 CashAwarded = 0;
+	if (bEnableScoreCashSeparation)
+	{
+		// Option B: Controlled cash dividend to prevent 10k wager spam runaway
+		CashAwarded = FMath::Max<int64>(MinCashDividendPerBank, FMath::RoundToInt64(BankedScore * ScoreToCashDividendRatio));
+		PlayerBankroll += CashAwarded;
+		LastRollOutcomeBanner = FString::Printf(TEXT("BANKED +%lld SCORE! (+$%lld Cash) Bankroll: $%lld"),
+			BankedScore, CashAwarded, PlayerBankroll);
+	}
+	else
+	{
+		// Option A: Unified Bankroll (Context Preserved: Table Wager Caps would clamp wagers)
+		CashAwarded = BankedScore;
+		PlayerBankroll += BankedScore;
+		LastRollOutcomeBanner = FString::Printf(TEXT("BANKED +%lld CHIPS! Bankroll: $%lld / %lld"),
+			BankedScore, PlayerBankroll, CurrentAnteQuota);
+	}
+
 	UnbankedComboPool = 0;
-	LastRollOutcomeBanner = FString::Printf(TEXT("BANKED +%lld CHIPS! Total Bankroll: %lld / %lld"), BankedAmount, PlayerBankroll, CurrentAnteQuota);
 	OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
-	OnWinningsSecured.Broadcast(BankedAmount);
-	return BankedAmount;
+	OnBankedPayoutVisuals.Broadcast(BankedScore, CashAwarded);
+
+	return BankedScore;
 }
 
 int64 ACrapsGameState::RefundAllEligibleWagers()

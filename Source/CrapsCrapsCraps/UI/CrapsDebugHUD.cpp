@@ -7,6 +7,7 @@
 #include "Scoring/ScoringQueueSubsystem.h"
 #include "Table/CrapsGameState.h"
 #include "Table/BetZone.h"
+#include "Table/CrapsFlyingChipActor.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "Engine/Canvas.h"
 #include "Engine/Font.h"
@@ -135,7 +136,12 @@ void ACrapsDebugHUD::DrawHUD()
 		DrawLine(PillX, PillY, PillX + PillW, PillY, CyanColor, 1.2f);
 
 		FString PillText;
-		if (CrapsPawn->GetHoveredBetZone())
+		if (bBettingBoardOpen)
+		{
+			PillText = FString::Printf(TEXT("BETTING TERMINAL OPEN  |  CHIP: [$%lld] (T/Wheel)  |  [LMB] Bet  |  [RMB] Refund  |  [B/Tab] Close"),
+				CrapsPawn->SelectedChipDenomination);
+		}
+		else if (CrapsPawn->GetHoveredBetZone())
 		{
 			PillText = FString::Printf(TEXT("ZONE: %s  |  CHIP: [$%lld] (T/Wheel)  |  [LMB] Bet  |  [RMB] Refund  |  [Space] Throw"),
 				*CrapsPawn->GetHoveredBetZone()->GetZoneName(),
@@ -143,7 +149,7 @@ void ACrapsDebugHUD::DrawHUD()
 		}
 		else
 		{
-			PillText = FString::Printf(TEXT("CHIP: [$%lld] (T/Wheel)  |  [LMB/Space] Throw  |  [F] Bank  |  [X] Press All  |  [H] Debug"),
+			PillText = FString::Printf(TEXT("CHIP: [$%lld] (T/Wheel)  |  [B/Tab] Betting Board  |  [LMB/Space] Throw  |  [F] Bank  |  [X] Press All"),
 				CrapsPawn->SelectedChipDenomination);
 		}
 
@@ -317,7 +323,7 @@ void ACrapsDebugHUD::DrawHUD()
 	// ========================================================================
 	// 3. PROJECT 3D FELT BET ZONE LABELS ONTO THE CANVAS (SMART FILTER)
 	// ========================================================================
-	if (CrapsGS)
+	if (CrapsGS && !bBettingBoardOpen)
 	{
 		const ABetZone* HoveredZone = CrapsPawn->GetHoveredBetZone();
 		for (ABetZone* Zone : CrapsGS->GetActiveBetZones())
@@ -439,4 +445,419 @@ void ACrapsDebugHUD::DrawHUD()
 			DrawText(ActionPrompt, GoldColor, ModalX + 30.0f, TextY, Font, 1.20f, false);
 		}
 	}
+
+	// ========================================================================
+	// 5. INTERACTIVE SYNTH-NOIR BETTING BOARD PANEL (Key B / Tab)
+	// ========================================================================
+	if (bBettingBoardOpen)
+	{
+		DrawBettingBoard(World, CrapsPawn, CrapsGS, Progression, Font, UiScale);
+	}
+}
+
+void ACrapsDebugHUD::DrawBettingBoard(
+	UWorld* World,
+	ACrapsPawn* CrapsPawn,
+	ACrapsGameState* CrapsGS,
+	URunProgressionSubsystem* Progression,
+	UFont* Font,
+	float UiScale)
+{
+	if (!Canvas || !CrapsGS || !CrapsPawn)
+	{
+		return;
+	}
+
+	CachedBetSlotClickAreas.Reset();
+
+	// Palette
+	const FLinearColor BgColor(0.012f, 0.012f, 0.024f, 0.94f);
+	const FLinearColor HeaderBg(0.02f, 0.045f, 0.075f, 0.98f);
+	const FLinearColor CardBg(0.022f, 0.025f, 0.042f, 0.90f);
+	const FLinearColor CardHoverBg(0.045f, 0.065f, 0.10f, 0.95f);
+	const FLinearColor CyanColor(0.0f, 0.96f, 0.83f, 1.0f);     // #00F5D4
+	const FLinearColor MagentaColor(1.0f, 0.16f, 0.52f, 1.0f);  // #FF2A85
+	const FLinearColor GoldColor(1.0f, 0.72f, 0.01f, 1.0f);     // #FFB703
+	const FLinearColor CrimsonColor(1.0f, 0.12f, 0.26f, 1.0f);  // #FF1E42
+	const FLinearColor WhiteColor(0.92f, 0.94f, 0.98f, 1.0f);
+	const FLinearColor DimWhite(0.65f, 0.70f, 0.78f, 1.0f);
+
+	// Panel Size & Placement
+	const float BoardW = FMath::Clamp(Canvas->SizeX * 0.76f, 760.0f * UiScale, 1040.0f * UiScale);
+	const float BoardH = FMath::Clamp(Canvas->SizeY * 0.64f, 440.0f * UiScale, 560.0f * UiScale);
+	const float BoardX = (Canvas->SizeX - BoardW) * 0.5f;
+	const float BoardY = (Canvas->SizeY - BoardH) * 0.5f;
+
+	CachedPanelTopLeft = FVector2D(BoardX, BoardY);
+	CachedPanelSize = FVector2D(BoardW, BoardH);
+
+	// Background & Frame
+	DrawRect(BgColor, BoardX, BoardY, BoardW, BoardH);
+	DrawLine(BoardX, BoardY, BoardX + BoardW, BoardY, CyanColor, 2.0f);
+	DrawLine(BoardX, BoardY + BoardH, BoardX + BoardW, BoardY + BoardH, MagentaColor, 2.0f);
+	DrawLine(BoardX, BoardY, BoardX, BoardY + BoardH, CyanColor, 2.0f);
+	DrawLine(BoardX + BoardW, BoardY, BoardX + BoardW, BoardY + BoardH, MagentaColor, 2.0f);
+
+	// Outer subtle neon accent
+	DrawLine(BoardX - 3.0f, BoardY - 3.0f, BoardX + BoardW + 3.0f, BoardY - 3.0f, CyanColor * 0.45f, 1.0f);
+	DrawLine(BoardX - 3.0f, BoardY + BoardH + 3.0f, BoardX + BoardW + 3.0f, BoardY + BoardH + 3.0f, MagentaColor * 0.45f, 1.0f);
+
+	// Mouse Position
+	APlayerController* PC = GetOwningPlayerController();
+	FVector2D MousePos(0.0f, 0.0f);
+	if (PC)
+	{
+		PC->GetMousePosition(MousePos.X, MousePos.Y);
+	}
+
+	// 1. Header Bar
+	const float HeaderH = 42.0f * UiScale;
+	DrawRect(HeaderBg, BoardX, BoardY, BoardW, HeaderH);
+	DrawLine(BoardX, BoardY + HeaderH, BoardX + BoardW, BoardY + HeaderH, CyanColor, 1.4f);
+
+	DrawText(
+		TEXT("// SYNTH-NOIR BETTING TERMINAL //"),
+		CyanColor,
+		BoardX + 16.0f * UiScale,
+		BoardY + 11.0f * UiScale,
+		Font,
+		1.05f * UiScale,
+		false);
+
+	const FString HeaderStatus = FString::Printf(
+		TEXT("BANKROLL: $%lld   |   POOL: +$%lld   |   CHIP: [$%lld] (T/Wheel)"),
+		CrapsGS->GetPlayerBankroll(),
+		CrapsGS->GetUnbankedPool(),
+		CrapsPawn->SelectedChipDenomination);
+
+	DrawText(
+		HeaderStatus,
+		GoldColor,
+		BoardX + 340.0f * UiScale,
+		BoardY + 13.0f * UiScale,
+		Font,
+		0.84f * UiScale,
+		false);
+
+	// Close [X] Button in Header
+	const float CloseBtnW = 28.0f * UiScale;
+	const float CloseBtnH = 28.0f * UiScale;
+	const float CloseBtnX = BoardX + BoardW - CloseBtnW - 8.0f * UiScale;
+	const float CloseBtnY = BoardY + 7.0f * UiScale;
+	const bool bCloseHover = (MousePos.X >= CloseBtnX && MousePos.X <= CloseBtnX + CloseBtnW &&
+	                         MousePos.Y >= CloseBtnY && MousePos.Y <= CloseBtnY + CloseBtnH);
+
+	DrawRect(bCloseHover ? CrimsonColor * 0.7f : FLinearColor(0.1f, 0.02f, 0.04f, 0.8f), CloseBtnX, CloseBtnY, CloseBtnW, CloseBtnH);
+	DrawLine(CloseBtnX, CloseBtnY, CloseBtnX + CloseBtnW, CloseBtnY, CrimsonColor, 1.0f);
+	DrawLine(CloseBtnX, CloseBtnY + CloseBtnH, CloseBtnX + CloseBtnW, CloseBtnY + CloseBtnH, CrimsonColor, 1.0f);
+	DrawLine(CloseBtnX, CloseBtnY, CloseBtnX, CloseBtnY + CloseBtnH, CrimsonColor, 1.0f);
+	DrawLine(CloseBtnX + CloseBtnW, CloseBtnY, CloseBtnX + CloseBtnW, CloseBtnY + CloseBtnH, CrimsonColor, 1.0f);
+	DrawText(TEXT("X"), WhiteColor, CloseBtnX + 9.0f * UiScale, CloseBtnY + 5.0f * UiScale, Font, 0.92f * UiScale, false);
+
+	FCrapsBetSlotClickArea CloseArea;
+	CloseArea.ActionType = EBetBoardActionType::Close;
+	CloseArea.DisplayName = TEXT("Close");
+	CloseArea.X = CloseBtnX;
+	CloseArea.Y = CloseBtnY;
+	CloseArea.W = CloseBtnW;
+	CloseArea.H = CloseBtnH;
+	CachedBetSlotClickAreas.Add(CloseArea);
+
+	// Helper Lambda to Draw a Bet Card
+	auto DrawBetCard = [&](ECrapsBetType BType, const FString& Title, const FString& OddsStr, float CX, float CY, float CW, float CH, const FLinearColor& AccentColor)
+	{
+		ABetZone* Zone = nullptr;
+		for (ABetZone* Z : CrapsGS->GetActiveBetZones())
+		{
+			if (Z && Z->GetBetType() == BType)
+			{
+				Zone = Z;
+				break;
+			}
+		}
+
+		const int64 Placed = Zone ? Zone->GetPlacedWager() : 0;
+		const bool bCanBet = Zone ? CrapsGS->CanModifyWager(Zone, false) : false;
+		const bool bIsHovered = (MousePos.X >= CX && MousePos.X <= CX + CW && MousePos.Y >= CY && MousePos.Y <= CY + CH);
+
+		FLinearColor BoxBg = bIsHovered ? CardHoverBg : CardBg;
+		FLinearColor BorderCol = AccentColor;
+		if (Placed > 0)
+		{
+			BorderCol = GoldColor;
+			BoxBg = FMath::Lerp(BoxBg, FLinearColor(0.12f, 0.09f, 0.01f, 0.95f), 0.5f);
+		}
+		if (!bCanBet && Placed == 0)
+		{
+			BorderCol = BorderCol * 0.45f;
+		}
+
+		DrawRect(BoxBg, CX, CY, CW, CH);
+		DrawLine(CX, CY, CX + CW, CY, BorderCol, bIsHovered ? 2.0f : 1.2f);
+		DrawLine(CX, CY + CH, CX + CW, CY + CH, BorderCol, bIsHovered ? 2.0f : 1.2f);
+		DrawLine(CX, CY, CX, CY + CH, BorderCol, bIsHovered ? 2.0f : 1.2f);
+		DrawLine(CX + CW, CY, CX + CW, CY + CH, BorderCol, bIsHovered ? 2.0f : 1.2f);
+
+		// Title
+		DrawText(Title, BorderCol, CX + 6.0f * UiScale, CY + 5.0f * UiScale, Font, 0.85f * UiScale, false);
+
+		// Odds
+		DrawText(OddsStr, DimWhite, CX + 6.0f * UiScale, CY + 22.0f * UiScale, Font, 0.72f * UiScale, false);
+
+		// Wager & Status
+		if (Placed > 0)
+		{
+			DrawText(FString::Printf(TEXT("WAGER: $%lld"), Placed), GoldColor, CX + 6.0f * UiScale, CY + 38.0f * UiScale, Font, 0.82f * UiScale, false);
+		}
+		else
+		{
+			DrawText(TEXT("EMPTY"), FLinearColor(0.35f, 0.38f, 0.45f, 1.0f), CX + 6.0f * UiScale, CY + 38.0f * UiScale, Font, 0.72f * UiScale, false);
+		}
+
+		// Tooltip on Hover
+		if (bIsHovered)
+		{
+			DrawText(
+				FString::Printf(TEXT("[LMB] +$%lld  |  [RMB] -$%lld"), CrapsPawn->SelectedChipDenomination, CrapsPawn->SelectedChipDenomination),
+				CyanColor, CX + 6.0f * UiScale, CY + CH - 16.0f * UiScale, Font, 0.68f * UiScale, false);
+		}
+
+		FCrapsBetSlotClickArea SlotArea;
+		SlotArea.ActionType = EBetBoardActionType::BetSlot;
+		SlotArea.BetType = BType;
+		SlotArea.DisplayName = Title;
+		SlotArea.X = CX;
+		SlotArea.Y = CY;
+		SlotArea.W = CW;
+		SlotArea.H = CH;
+		CachedBetSlotClickAreas.Add(SlotArea);
+	};
+
+	const float MarginX = 14.0f * UiScale;
+	const float ContentW = BoardW - (MarginX * 2.0f);
+	float CurrentY = BoardY + HeaderH + 10.0f * UiScale;
+
+	// Section 1: Place Bets (Numbers: 4, 5, 6, 8, 9, 10)
+	DrawText(TEXT("PLACE NUMBERS // REPEATING PAYOUTS"), CyanColor, BoardX + MarginX, CurrentY - 2.0f, Font, 0.80f * UiScale, false);
+	CurrentY += 15.0f * UiScale;
+
+	const float PlaceGap = 8.0f * UiScale;
+	const float PlaceSlotW = (ContentW - (PlaceGap * 5.0f)) / 6.0f;
+	const float PlaceSlotH = 68.0f * UiScale;
+
+	struct FPlaceDef { ECrapsBetType Type; const TCHAR* Name; const TCHAR* Odds; int32 PointNum; };
+	static const FPlaceDef PlaceDefs[] = {
+		{ ECrapsBetType::Place4,  TEXT("PLACE 4"),  TEXT("9:5 (1.8x)"), 4 },
+		{ ECrapsBetType::Place5,  TEXT("PLACE 5"),  TEXT("7:5 (1.4x)"), 5 },
+		{ ECrapsBetType::Place6,  TEXT("PLACE 6"),  TEXT("7:6 (1.16x)"), 6 },
+		{ ECrapsBetType::Place8,  TEXT("PLACE 8"),  TEXT("7:6 (1.16x)"), 8 },
+		{ ECrapsBetType::Place9,  TEXT("PLACE 9"),  TEXT("7:5 (1.4x)"), 9 },
+		{ ECrapsBetType::Place10, TEXT("PLACE 10"), TEXT("9:5 (1.8x)"), 10 }
+	};
+
+	for (int32 i = 0; i < 6; ++i)
+	{
+		const float PX = BoardX + MarginX + i * (PlaceSlotW + PlaceGap);
+		FString Title = PlaceDefs[i].Name;
+		if (CrapsGS->GetTablePhase() == ECrapsTablePhase::PointEstablished && CrapsGS->GetEstablishedPoint() == PlaceDefs[i].PointNum)
+		{
+			Title += TEXT(" [POINT]");
+		}
+		DrawBetCard(PlaceDefs[i].Type, Title, PlaceDefs[i].Odds, PX, CurrentY, PlaceSlotW, PlaceSlotH, CyanColor);
+	}
+	CurrentY += PlaceSlotH + 12.0f * UiScale;
+
+	// Section 2: Main Lines (Pass Line, Field, Don't Pass)
+	DrawText(TEXT("MAIN LINES // CORE GAMEPLAY"), GoldColor, BoardX + MarginX, CurrentY - 2.0f, Font, 0.80f * UiScale, false);
+	CurrentY += 15.0f * UiScale;
+
+	const float LineGap = 12.0f * UiScale;
+	const float LineSlotW = (ContentW - (LineGap * 2.0f)) / 3.0f;
+	const float LineSlotH = 66.0f * UiScale;
+
+	DrawBetCard(ECrapsBetType::PassLine, TEXT("PASS LINE"), TEXT("1:1  (Point Hunter)"),
+		BoardX + MarginX, CurrentY, LineSlotW, LineSlotH, GoldColor);
+
+	DrawBetCard(ECrapsBetType::Field, TEXT("THE FIELD"), TEXT("1:1 (2x on 2/12)"),
+		BoardX + MarginX + (LineSlotW + LineGap), CurrentY, LineSlotW, LineSlotH, CyanColor);
+
+	DrawBetCard(ECrapsBetType::DontPass, TEXT("DON'T PASS BAR"), TEXT("1:1 (Seven-Out Win)"),
+		BoardX + MarginX + 2.0f * (LineSlotW + LineGap), CurrentY, LineSlotW, LineSlotH, CrimsonColor);
+
+	CurrentY += LineSlotH + 12.0f * UiScale;
+
+	// Section 3: Hardways & Horn Propositions
+	DrawText(TEXT("PROPOSITIONS & HARDWAYS // HIGH MULTIPLIER RISKS"), MagentaColor, BoardX + MarginX, CurrentY - 2.0f, Font, 0.80f * UiScale, false);
+	CurrentY += 15.0f * UiScale;
+
+	const float PropGap = 8.0f * UiScale;
+	const float PropSlotW = (ContentW - (PropGap * 4.0f)) / 5.0f;
+	const float PropSlotH = 68.0f * UiScale;
+
+	static const FPlaceDef PropDefs[] = {
+		{ ECrapsBetType::Hard4,  TEXT("HARD 4"),  TEXT("7:1 (2+2)"), 0 },
+		{ ECrapsBetType::Hard6,  TEXT("HARD 6"),  TEXT("9:1 (3+3)"), 0 },
+		{ ECrapsBetType::Horn,   TEXT("HORN BET"),TEXT("15:1 / 30:1"), 0 },
+		{ ECrapsBetType::Hard8,  TEXT("HARD 8"),  TEXT("9:1 (4+4)"), 0 },
+		{ ECrapsBetType::Hard10, TEXT("HARD 10"), TEXT("7:1 (5+5)"), 0 }
+	};
+
+	for (int32 i = 0; i < 5; ++i)
+	{
+		const float PropX = BoardX + MarginX + i * (PropSlotW + PropGap);
+		DrawBetCard(PropDefs[i].Type, PropDefs[i].Name, PropDefs[i].Odds, PropX, CurrentY, PropSlotW, PropSlotH, MagentaColor);
+	}
+	CurrentY += PropSlotH + 12.0f * UiScale;
+
+	// Section 4: Action Footer Buttons (Clear All, Press All, Bank Pool, Close)
+	const float ActionGap = 10.0f * UiScale;
+	const float ActionBtnW = (ContentW - (ActionGap * 3.0f)) / 4.0f;
+	const float ActionBtnH = 34.0f * UiScale;
+
+	auto DrawActionBtn = [&](EBetBoardActionType AType, const FString& Label, float BX, float BY, const FLinearColor& BorderCol)
+	{
+		const bool bHover = (MousePos.X >= BX && MousePos.X <= BX + ActionBtnW &&
+		                    MousePos.Y >= BY && MousePos.Y <= BY + ActionBtnH);
+
+		DrawRect(bHover ? CardHoverBg : CardBg, BX, BY, ActionBtnW, ActionBtnH);
+		DrawLine(BX, BY, BX + ActionBtnW, BY, BorderCol, bHover ? 2.0f : 1.2f);
+		DrawLine(BX, BY + ActionBtnH, BX + ActionBtnW, BY + ActionBtnH, BorderCol, bHover ? 2.0f : 1.2f);
+		DrawLine(BX, BY, BX, BY + ActionBtnH, BorderCol, bHover ? 2.0f : 1.2f);
+		DrawLine(BX + ActionBtnW, BY, BX + ActionBtnW, BY + ActionBtnH, BorderCol, bHover ? 2.0f : 1.2f);
+
+		DrawText(Label, bHover ? WhiteColor : BorderCol, BX + 8.0f * UiScale, BY + 9.0f * UiScale, Font, 0.78f * UiScale, false);
+
+		FCrapsBetSlotClickArea ActionArea;
+		ActionArea.ActionType = AType;
+		ActionArea.DisplayName = Label;
+		ActionArea.X = BX;
+		ActionArea.Y = BY;
+		ActionArea.W = ActionBtnW;
+		ActionArea.H = ActionBtnH;
+		CachedBetSlotClickAreas.Add(ActionArea);
+	};
+
+	DrawActionBtn(EBetBoardActionType::ClearBets, TEXT("CLEAR BETS (Bksp)"), BoardX + MarginX, CurrentY, CrimsonColor);
+	DrawActionBtn(EBetBoardActionType::PressAll,  TEXT("PRESS ALL (X)"),     BoardX + MarginX + (ActionBtnW + ActionGap), CurrentY, GoldColor);
+	DrawActionBtn(EBetBoardActionType::BankPool,  FString::Printf(TEXT("BANK POOL +$%lld (F)"), CrapsGS->GetUnbankedPool()), BoardX + MarginX + 2.0f * (ActionBtnW + ActionGap), CurrentY, CyanColor);
+	DrawActionBtn(EBetBoardActionType::Close,     TEXT("CLOSE [B / Tab]"),   BoardX + MarginX + 3.0f * (ActionBtnW + ActionGap), CurrentY, WhiteColor);
+}
+
+bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bIsRightClick)
+{
+	if (!bBettingBoardOpen)
+	{
+		return false;
+	}
+
+	UWorld* World = GetWorld();
+	ACrapsPawn* CrapsPawn = Cast<ACrapsPawn>(GetOwningPawn());
+	ACrapsGameState* CrapsGS = World ? World->GetGameState<ACrapsGameState>() : nullptr;
+
+	// If clicked outside the betting board panel, close the panel and consume click
+	const bool bInsidePanel = (ScreenPos.X >= CachedPanelTopLeft.X && ScreenPos.X <= CachedPanelTopLeft.X + CachedPanelSize.X &&
+	                           ScreenPos.Y >= CachedPanelTopLeft.Y && ScreenPos.Y <= CachedPanelTopLeft.Y + CachedPanelSize.Y);
+
+	if (!bInsidePanel)
+	{
+		bBettingBoardOpen = false;
+		return true; // Consumed (closed panel, did not charge throw!)
+	}
+
+	if (!CrapsGS || !CrapsPawn)
+	{
+		return true;
+	}
+
+	for (const FCrapsBetSlotClickArea& Area : CachedBetSlotClickAreas)
+	{
+		if (ScreenPos.X >= Area.X && ScreenPos.X <= Area.X + Area.W &&
+		    ScreenPos.Y >= Area.Y && ScreenPos.Y <= Area.Y + Area.H)
+		{
+			switch (Area.ActionType)
+			{
+			case EBetBoardActionType::Close:
+				bBettingBoardOpen = false;
+				return true;
+
+			case EBetBoardActionType::BankPool:
+				CrapsGS->BankUnbankedPool();
+				return true;
+
+			case EBetBoardActionType::PressAll:
+				CrapsGS->PlaceDefaultSpreadBets();
+				return true;
+
+			case EBetBoardActionType::ClearBets:
+				CrapsGS->RefundAllEligibleWagers();
+				return true;
+
+			case EBetBoardActionType::BetSlot:
+			{
+				ABetZone* TargetZone = nullptr;
+				for (ABetZone* Z : CrapsGS->GetActiveBetZones())
+				{
+					if (Z && Z->GetBetType() == Area.BetType)
+					{
+						TargetZone = Z;
+						break;
+					}
+				}
+
+				if (!TargetZone)
+				{
+					return true;
+				}
+
+				const FVector PlayerPos = CrapsPawn->GetActorLocation() + CrapsPawn->GetActorForwardVector() * 50.0f + FVector(0.0f, 0.0f, 40.0f);
+				const FVector ZonePos = TargetZone->GetActorLocation() + FVector(0.0f, 0.0f, 12.0f);
+
+				if (!bIsRightClick)
+				{
+					// Place Wager
+					const int64 Denom = CrapsPawn->SelectedChipDenomination;
+					if (CrapsGS->CanModifyWager(TargetZone, false))
+					{
+						if (CrapsGS->PlaceWager(TargetZone, Denom))
+						{
+							TargetZone->TriggerWinPulse();
+							ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 45.0f, 0.38f, FLinearColor(0.0f, 0.96f, 0.83f));
+							CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("BET +$%lld ON %s! Bankroll: $%lld"),
+								Denom, *TargetZone->GetZoneName(), CrapsGS->GetPlayerBankroll()));
+						}
+					}
+					else
+					{
+						CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("CANNOT BET ON %s IN CURRENT PHASE"),
+							*TargetZone->GetZoneName()));
+					}
+				}
+				else
+				{
+					// Remove / Refund Wager
+					const int64 Denom = CrapsPawn->SelectedChipDenomination;
+					if (CrapsGS->CanModifyWager(TargetZone, true))
+					{
+						int64 Refunded = 0;
+						if (CrapsGS->RemoveWager(TargetZone, Denom, Refunded))
+						{
+							ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 45.0f, 0.38f, FLinearColor(1.0f, 0.72f, 0.01f));
+							CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("REFUNDED $%lld FROM %s! Bankroll: $%lld"),
+								Refunded, *TargetZone->GetZoneName(), CrapsGS->GetPlayerBankroll()));
+						}
+					}
+					else
+					{
+						CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("CANNOT REMOVE %s (CONTRACT LOCKED)"),
+							*TargetZone->GetZoneName()));
+					}
+				}
+				return true;
+			}
+			}
+		}
+	}
+
+	// Clicked inside panel but missed a specific button: still consume so throw does not trigger!
+	return true;
 }
