@@ -47,7 +47,9 @@ void ACrapsDebugHUD::DrawHUD()
 	const FLinearColor CrimsonColor(1.0f, 0.12f, 0.26f, 1.0f);  // #FF1E42 Seven-Out Danger
 	const FLinearColor WhiteColor(0.92f, 0.94f, 0.98f, 1.0f);
 
-	const float UiScale = FMath::Clamp(Canvas->SizeX / 1920.0f, 0.68f, 1.0f);
+	const float MinScale = 0.38f;
+	const float AspectRatioScale = FMath::Min(Canvas->SizeX / 1920.0f, Canvas->SizeY / 1080.0f);
+	const float UiScale = FMath::Clamp(AspectRatioScale, MinScale, 1.0f);
 
 	// ========================================================================
 	// 1. LEFT PANEL: Optional Developer Controls (Toggled via [H])
@@ -124,16 +126,28 @@ void ACrapsDebugHUD::DrawHUD()
 	else
 	{
 		// Sleek minimal floating pill at bottom-left
-		const float PillW = 600.0f * UiScale;
-		const float PillH = 24.0f * UiScale;
+		const float PillW = (bStreamlinedHUD ? 640.0f : 740.0f) * UiScale;
+		const float PillH = 26.0f * UiScale;
 		const float PillX = 16.0f;
 		const float PillY = Canvas->SizeY - PillH - 12.0f;
 
-		DrawRect(FLinearColor(0.015f, 0.015f, 0.035f, 0.65f), PillX, PillY, PillW, PillH);
-		DrawLine(PillX, PillY, PillX + PillW, PillY, CyanColor, 1.0f);
+		DrawRect(FLinearColor(0.015f, 0.015f, 0.035f, 0.78f), PillX, PillY, PillW, PillH);
+		DrawLine(PillX, PillY, PillX + PillW, PillY, CyanColor, 1.2f);
 
-		DrawText(TEXT("[LMB/Space] Throw  |  [F] Bank  |  [X] Press Bets  |  [Backspace] Clear  |  [H] Help"),
-			CyanColor, PillX + 8.0f * UiScale, PillY + 4.0f * UiScale, Font, 0.85f * UiScale, false);
+		FString PillText;
+		if (CrapsPawn->GetHoveredBetZone())
+		{
+			PillText = FString::Printf(TEXT("ZONE: %s  |  CHIP: [$%lld] (T/Wheel)  |  [LMB] Bet  |  [RMB] Refund  |  [Space] Throw"),
+				*CrapsPawn->GetHoveredBetZone()->GetZoneName(),
+				CrapsPawn->SelectedChipDenomination);
+		}
+		else
+		{
+			PillText = FString::Printf(TEXT("CHIP: [$%lld] (T/Wheel)  |  [LMB/Space] Throw  |  [F] Bank  |  [X] Press All  |  [H] Debug"),
+				CrapsPawn->SelectedChipDenomination);
+		}
+
+		DrawText(PillText, CyanColor, PillX + 8.0f * UiScale, PillY + 4.0f * UiScale, Font, 0.82f * UiScale, false);
 	}
 
 	// ========================================================================
@@ -165,22 +179,22 @@ void ACrapsDebugHUD::DrawHUD()
 	ACrapsGameState* CrapsGS = World ? World->GetGameState<ACrapsGameState>() : nullptr;
 	URunProgressionSubsystem* Progression = World ? World->GetSubsystem<URunProgressionSubsystem>() : nullptr;
 
-	const float ScoreW = 390.0f * UiScale;
-	const float ScoreH = 135.0f * UiScale;
+	const float ScoreW = (bStreamlinedHUD ? 320.0f : 390.0f) * UiScale;
+	const float ScoreH = (bStreamlinedHUD ? 116.0f : 135.0f) * UiScale;
 	const float ScoreX = Canvas->SizeX - ScoreW - 16.0f;
 	const float ScoreY = 16.0f;
 
-	DrawRect(FLinearColor(0.015f, 0.015f, 0.032f, 0.65f), ScoreX, ScoreY, ScoreW, ScoreH);
-	DrawLine(ScoreX, ScoreY, ScoreX + ScoreW, ScoreY, GoldColor, 1.8f);
-	DrawLine(ScoreX, ScoreY + ScoreH, ScoreX + ScoreW, ScoreY + ScoreH, CyanColor, 1.8f);
-	DrawLine(ScoreX, ScoreY, ScoreX, ScoreY + ScoreH, GoldColor, 1.8f);
-	DrawLine(ScoreX + ScoreW, ScoreY, ScoreX + ScoreW, ScoreY + ScoreH, CyanColor, 1.8f);
+	DrawRect(FLinearColor(0.015f, 0.015f, 0.032f, 0.70f), ScoreX, ScoreY, ScoreW, ScoreH);
+	DrawLine(ScoreX, ScoreY, ScoreX + ScoreW, ScoreY, GoldColor, 1.6f);
+	DrawLine(ScoreX, ScoreY + ScoreH, ScoreX + ScoreW, ScoreY + ScoreH, CyanColor, 1.6f);
+	DrawLine(ScoreX, ScoreY, ScoreX, ScoreY + ScoreH, GoldColor, 1.6f);
+	DrawLine(ScoreX + ScoreW, ScoreY, ScoreX + ScoreW, ScoreY + ScoreH, CyanColor, 1.6f);
 
-	float SY = ScoreY + 8.0f * UiScale;
-	const float SX = ScoreX + 12.0f * UiScale;
-	const float RowStep = 21.0f * UiScale;
+	float SY = ScoreY + (bStreamlinedHUD ? 6.0f : 8.0f) * UiScale;
+	const float SX = ScoreX + 10.0f * UiScale;
+	const float RowStep = (bStreamlinedHUD ? 18.0f : 21.0f) * UiScale;
 
-	auto DrawScoreRow = [&](const FString& Text, const FLinearColor& Color, float Scale = 0.96f)
+	auto DrawScoreRow = [&](const FString& Text, const FLinearColor& Color, float Scale = 0.94f)
 	{
 		DrawText(Text, Color, SX, SY, Font, Scale * UiScale, false);
 		SY += RowStep * Scale;
@@ -301,26 +315,52 @@ void ACrapsDebugHUD::DrawHUD()
 	}
 
 	// ========================================================================
-	// 3. PROJECT 3D FELT BET ZONE LABELS ONTO THE CANVAS
+	// 3. PROJECT 3D FELT BET ZONE LABELS ONTO THE CANVAS (SMART FILTER)
 	// ========================================================================
 	if (CrapsGS)
 	{
+		const ABetZone* HoveredZone = CrapsPawn->GetHoveredBetZone();
 		for (ABetZone* Zone : CrapsGS->GetActiveBetZones())
 		{
 			if (!Zone)
 			{
 				continue;
 			}
+
+			const bool bIsHovered = (Zone == HoveredZone);
+			const bool bHasWager = (Zone->GetPlacedWager() > 0);
+
+			// In streamlined mode, only draw 2D overlays for hovered zones or zones with active wagers
+			if (bStreamlinedHUD && !bIsHovered && !bHasWager)
+			{
+				continue;
+			}
+
 			const FVector ScreenPos = Project(Zone->GetActorLocation() + FVector(0.0f, 0.0f, 14.0f));
 			if (ScreenPos.Z > 0.0f)
 			{
-				const FString Label = FString::Printf(
-					TEXT("%s\n[$%lld | %.1fx]"),
-					*Zone->GetZoneName(),
-					Zone->GetPlacedWager(),
-					Zone->GetEffectiveBetMultiplier());
-				const FLinearColor ZoneCol = (Zone->GetPlacedWager() > 0) ? GoldColor : CyanColor;
-				DrawText(Label, ZoneCol, ScreenPos.X - 38.0f, ScreenPos.Y - 12.0f, Font, 0.88f, false);
+				if (bIsHovered)
+				{
+					// Expanded interactive tooltip card
+					const FString Label = FString::Printf(
+						TEXT("%s  [$%lld | %.1fx]\n[LMB] +$%lld  |  [RMB] -$%lld"),
+						*Zone->GetZoneName(),
+						Zone->GetPlacedWager(),
+						Zone->GetEffectiveBetMultiplier(),
+						CrapsPawn->SelectedChipDenomination,
+						CrapsPawn->SelectedChipDenomination);
+					const FLinearColor ZoneCol = bHasWager ? GoldColor : CyanColor;
+					DrawText(Label, ZoneCol, ScreenPos.X - 60.0f * UiScale, ScreenPos.Y - 18.0f * UiScale, Font, 0.84f * UiScale, false);
+				}
+				else
+				{
+					// Compact chip stack badge for active bets
+					const FString Label = FString::Printf(
+						TEXT("%s: $%lld"),
+						*Zone->GetZoneName(),
+						Zone->GetPlacedWager());
+					DrawText(Label, GoldColor, ScreenPos.X - 35.0f * UiScale, ScreenPos.Y - 10.0f * UiScale, Font, 0.78f * UiScale, false);
+				}
 			}
 		}
 	}

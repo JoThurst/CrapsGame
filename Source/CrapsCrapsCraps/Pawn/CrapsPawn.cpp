@@ -5,6 +5,7 @@
 #include "Core/CrapsTableGrayboxActor.h"
 #include "Scoring/ScoringQueueSubsystem.h"
 #include "Table/CrapsGameState.h"
+#include "Table/BetZone.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "UI/CrapsDebugHUD.h"
 #include "Hazards/TableHazard.h"
@@ -200,6 +201,8 @@ void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	// Throw Charge & Release (Left Mouse Button or SpaceBar)
 	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Pressed, this, &ACrapsPawn::Input_ThrowPress);
 	PlayerInputComponent->BindKey(EKeys::LeftMouseButton, IE_Released, this, &ACrapsPawn::Input_ThrowRelease);
+	PlayerInputComponent->BindKey(EKeys::RightMouseButton, IE_Pressed, this, &ACrapsPawn::Input_RightClickPress);
+	PlayerInputComponent->BindKey(EKeys::T, IE_Pressed, this, &ACrapsPawn::Input_CycleDenominationUp);
 	PlayerInputComponent->BindKey(EKeys::SpaceBar, IE_Pressed, this, &ACrapsPawn::Input_ThrowPress);
 	PlayerInputComponent->BindKey(EKeys::SpaceBar, IE_Released, this, &ACrapsPawn::Input_ThrowRelease);
 
@@ -296,6 +299,7 @@ void ACrapsPawn::Tick(float DeltaTime)
 	case ECrapsThrowPhase::OnFeltSetting:
 		UpdateOnFeltDiceRotationSlerp(DeltaTime);
 		UpdateThrowChargingAndTrajectory(DeltaTime);
+		UpdateCursorHoverRaycast();
 		break;
 
 	case ECrapsThrowPhase::ThrowCharging:
@@ -983,8 +987,25 @@ void ACrapsPawn::Input_YawRight()   { RotateDiceOnFelt90Degrees(FVector::UpVecto
 void ACrapsPawn::Input_RollLeft()   { RotateDiceOnFelt90Degrees(FVector::ForwardVector, -1.0f); }
 void ACrapsPawn::Input_RollRight()  { RotateDiceOnFelt90Degrees(FVector::ForwardVector, 1.0f); }
 
-void ACrapsPawn::Input_MouseWheelUp()   { ScrollVSetAxis(1.0f); }
-void ACrapsPawn::Input_MouseWheelDown() { ScrollVSetAxis(-1.0f); }
+void ACrapsPawn::Input_MouseWheelUp()
+{
+	if (HoveredBetZone && CurrentPhase == ECrapsThrowPhase::OnFeltSetting)
+	{
+		CycleChipDenomination(1);
+		return;
+	}
+	ScrollVSetAxis(1.0f);
+}
+
+void ACrapsPawn::Input_MouseWheelDown()
+{
+	if (HoveredBetZone && CurrentPhase == ECrapsThrowPhase::OnFeltSetting)
+	{
+		CycleChipDenomination(-1);
+		return;
+	}
+	ScrollVSetAxis(-1.0f);
+}
 
 void ACrapsPawn::Input_Preset1() { ApplyPresetDiceSnap(1); }
 void ACrapsPawn::Input_Preset2() { ApplyPresetDiceSnap(2); }
@@ -1021,6 +1042,32 @@ void ACrapsPawn::Input_ThrowPress()
 
 	if (CurrentPhase != ECrapsThrowPhase::OnFeltSetting)
 	{
+		return;
+	}
+
+	// Targeted betting: clicking on an interactive bet zone places chips on that specific zone instead of throwing!
+	if (HoveredBetZone)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+			{
+				if (GS->CanModifyWager(HoveredBetZone, false))
+				{
+					if (GS->PlaceWager(HoveredBetZone, SelectedChipDenomination))
+					{
+						HoveredBetZone->TriggerWinPulse();
+						GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("BET +$%lld ON %s! Bankroll: $%lld"),
+							SelectedChipDenomination, *HoveredBetZone->GetZoneName(), GS->GetPlayerBankroll()));
+					}
+				}
+				else
+				{
+					GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("CANNOT BET ON %s IN CURRENT PHASE"),
+						*HoveredBetZone->GetZoneName()));
+				}
+			}
+		}
 		return;
 	}
 
@@ -1185,3 +1232,114 @@ void ACrapsPawn::CycleShooterStation(int32 Direction)
 
 void ACrapsPawn::Input_StationNext() { CycleShooterStation(1); }
 void ACrapsPawn::Input_StationPrev() { CycleShooterStation(-1); }
+
+void ACrapsPawn::Input_RightClickPress()
+{
+	if (CurrentPhase != ECrapsThrowPhase::OnFeltSetting || !HoveredBetZone)
+	{
+		return;
+	}
+
+	if (UWorld* World = GetWorld())
+	{
+		if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+		{
+			if (GS->CanModifyWager(HoveredBetZone, true))
+			{
+				int64 Refunded = 0;
+				if (GS->RemoveWager(HoveredBetZone, SelectedChipDenomination, Refunded))
+				{
+					GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("REFUNDED $%lld FROM %s! Bankroll: $%lld"),
+						Refunded, *HoveredBetZone->GetZoneName(), GS->GetPlayerBankroll()));
+				}
+			}
+			else
+			{
+				GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("CANNOT REMOVE %s (CONTRACT LOCKED)"),
+					*HoveredBetZone->GetZoneName()));
+			}
+		}
+	}
+}
+
+void ACrapsPawn::CycleChipDenomination(int32 Direction)
+{
+	static const int64 Denominations[] = { 10, 25, 50, 100, 500 };
+	const int32 Count = UE_ARRAY_COUNT(Denominations);
+	int32 CurrentIndex = 2; // Default 50
+	for (int32 i = 0; i < Count; ++i)
+	{
+		if (Denominations[i] == SelectedChipDenomination)
+		{
+			CurrentIndex = i;
+			break;
+		}
+	}
+
+	if (Direction > 0)
+	{
+		CurrentIndex = (CurrentIndex + 1) % Count;
+	}
+	else
+	{
+		CurrentIndex = (CurrentIndex - 1 + Count) % Count;
+	}
+
+	SelectedChipDenomination = Denominations[CurrentIndex];
+}
+
+void ACrapsPawn::SetChipDenomination(int64 NewDenomination)
+{
+	SelectedChipDenomination = FMath::Max<int64>(1, NewDenomination);
+}
+
+void ACrapsPawn::Input_CycleDenominationUp()
+{
+	CycleChipDenomination(1);
+}
+
+void ACrapsPawn::Input_CycleDenominationDown()
+{
+	CycleChipDenomination(-1);
+}
+
+void ACrapsPawn::UpdateCursorHoverRaycast()
+{
+	if (CurrentPhase != ECrapsThrowPhase::OnFeltSetting)
+	{
+		if (HoveredBetZone)
+		{
+			HoveredBetZone->SetHovered(false);
+			HoveredBetZone = nullptr;
+		}
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (!PC)
+	{
+		return;
+	}
+
+	FHitResult HitResult;
+	const bool bHit = PC->GetHitResultUnderCursorByChannel(UEngineTypes::ConvertToTraceType(ECC_Visibility), false, HitResult);
+
+	ABetZone* NewHoveredZone = nullptr;
+	if (bHit && HitResult.GetActor())
+	{
+		NewHoveredZone = Cast<ABetZone>(HitResult.GetActor());
+	}
+
+	if (HoveredBetZone != NewHoveredZone)
+	{
+		if (HoveredBetZone)
+		{
+			HoveredBetZone->SetHovered(false);
+		}
+		HoveredBetZone = NewHoveredZone;
+		if (HoveredBetZone)
+		{
+			HoveredBetZone->SetHovered(true);
+		}
+	}
+}

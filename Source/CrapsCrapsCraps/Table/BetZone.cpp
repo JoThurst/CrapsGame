@@ -79,7 +79,11 @@ void ABetZone::RefreshVisuals()
 	const bool bHasWager = PlacedWager > 0;
 	const FLinearColor Cyan(0.0f, 0.96f, 0.83f);
 	const FLinearColor Gold(1.0f, 0.72f, 0.01f);
-	const FLinearColor AccentColor = bHasWager ? Gold : Cyan;
+	FLinearColor AccentColor = bHasWager ? Gold : Cyan;
+	if (bIsHovered)
+	{
+		AccentColor = bHasWager ? FLinearColor(1.0f, 0.95f, 0.45f) : FLinearColor(0.5f, 1.0f, 0.95f);
+	}
 
 	if (UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
 	{
@@ -93,7 +97,8 @@ void ABetZone::RefreshVisuals()
 			BorderMID = UMaterialInstanceDynamic::Create(BaseMat, this);
 			ZoneBorderMesh->SetMaterial(0, BorderMID);
 		}
-		PadMID->SetVectorParameterValue(TEXT("Color"), FLinearColor(0.01f, 0.04f, 0.04f));
+		const FLinearColor PadColor = bIsHovered ? FLinearColor(0.03f, 0.07f, 0.08f) : FLinearColor(0.01f, 0.04f, 0.04f);
+		PadMID->SetVectorParameterValue(TEXT("Color"), PadColor);
 		BorderMID->SetVectorParameterValue(TEXT("Color"), AccentColor);
 	}
 
@@ -158,6 +163,15 @@ void ABetZone::ClearWager()
 {
 	PlacedWager = 0;
 	RefreshVisuals();
+}
+
+void ABetZone::SetHovered(bool bInHovered)
+{
+	if (bIsHovered != bInHovered)
+	{
+		bIsHovered = bInHovered;
+		RefreshVisuals();
+	}
 }
 
 float ABetZone::GetEffectiveBetMultiplier() const

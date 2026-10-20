@@ -770,10 +770,12 @@ void ACrapsTableGrayboxActor::BuildFeltLayout()
 	// ---- 3D DEALER PUCK (ON = white, OFF = black). Moves when the table phase changes. ----
 	{
 		DealerPuckMesh = AddLayoutMesh(CachedCylinderMesh, FVector(PointBoxCenters.IsValidIndex(0) ? PointBoxCenters[0].X : 225.0f, 180.0f, 3.0f), FRotator::ZeroRotator, FVector(0.34f, 0.34f, 0.05f), FLinearColor(0.02f, 0.02f, 0.02f));
+		DealerPuckMesh->SetMobility(EComponentMobility::Movable);
 		DealerPuckMesh->ComponentTags.AddUnique(TEXT("DealerPuckMesh"));
 
 		UTextRenderComponent* PuckLabel = NewObject<UTextRenderComponent>(this);
 		PuckLabel->CreationMethod = EComponentCreationMethod::UserConstructionScript;
+		PuckLabel->SetMobility(EComponentMobility::Movable);
 		PuckLabel->SetupAttachment(DealerPuckMesh);
 		PuckLabel->SetText(FText::FromString(TEXT("OFF")));
 		PuckLabel->SetWorldSize(11.0f);
@@ -832,6 +834,7 @@ void ACrapsTableGrayboxActor::EnsureLayoutResolved()
 					 FMath::IsNearlyEqual(SMC->GetRelativeScale3D().Z, 0.05f, 0.03f)))
 				{
 					DealerPuckMesh = SMC;
+					DealerPuckMesh->SetMobility(EComponentMobility::Movable);
 					break;
 				}
 			}
@@ -845,6 +848,7 @@ void ACrapsTableGrayboxActor::EnsureLayoutResolved()
 			if (UTextRenderComponent* TRC = Cast<UTextRenderComponent>(Child))
 			{
 				DealerPuckText = TRC;
+				DealerPuckText->SetMobility(EComponentMobility::Movable);
 				break;
 			}
 		}
@@ -854,6 +858,7 @@ void ACrapsTableGrayboxActor::EnsureLayoutResolved()
 	if (!DealerPuckMesh && CachedCylinderMesh)
 	{
 		DealerPuckMesh = NewObject<UStaticMeshComponent>(this, TEXT("RuntimeDealerPuckMesh"));
+		DealerPuckMesh->SetMobility(EComponentMobility::Movable);
 		DealerPuckMesh->SetStaticMesh(CachedCylinderMesh);
 		DealerPuckMesh->SetupAttachment(TableRoot ? TableRoot.Get() : GetRootComponent());
 		DealerPuckMesh->SetRelativeLocation(FVector(65.0f, 180.0f, 3.0f));
@@ -870,6 +875,7 @@ void ACrapsTableGrayboxActor::EnsureLayoutResolved()
 	if (DealerPuckMesh && !DealerPuckText)
 	{
 		DealerPuckText = NewObject<UTextRenderComponent>(this, TEXT("RuntimeDealerPuckText"));
+		DealerPuckText->SetMobility(EComponentMobility::Movable);
 		DealerPuckText->SetupAttachment(DealerPuckMesh);
 		DealerPuckText->SetText(FText::FromString(TEXT("OFF")));
 		DealerPuckText->SetWorldSize(11.0f);

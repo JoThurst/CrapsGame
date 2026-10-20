@@ -28,4 +28,11 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Craps|UI")
 	void ToggleDebugControls() { bShowDebugControls = !bShowDebugControls; }
+
+	/** Toggle streamlined minimal HUD mode. When true, uses compact cards and smart label filtering. Defaults to true. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|UI")
+	bool bStreamlinedHUD = true;
+
+	UFUNCTION(BlueprintCallable, Category = "Craps|UI")
+	void ToggleStreamlinedHUD() { bStreamlinedHUD = !bStreamlinedHUD; }
 };

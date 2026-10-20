@@ -18,6 +18,7 @@ class UThrowStyle_ParabolicLob;
 class UThrowStyle_BackWallWhip;
 class UThrowStyle_MechanicalPlunger;
 class ACrapsTableGrayboxActor;
+class ABetZone;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 	FOnRollResolvedSignature,
@@ -251,8 +252,28 @@ public:
 	/** Converts a pawn-local offset (+X = throw direction) to world space. */
 	FVector PawnLocalToWorld(const FVector& LocalOffset) const;
 
+	//~ Targeted POV Bet Placement & Chip Denominations
+	/** Returns the currently hovered bet zone under the mouse cursor. */
+	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|Betting")
+	ABetZone* GetHoveredBetZone() const { return HoveredBetZone; }
+
+	/** Currently selected chip denomination for placement ($10, $25, $50, $100, $500). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Pawn|Betting")
+	int64 SelectedChipDenomination = 50;
+
+	/** Cycles through available chip denominations: $10, $25, $50, $100, $500. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Betting")
+	void CycleChipDenomination(int32 Direction = 1);
+
+	/** Sets active chip denomination directly. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Betting")
+	void SetChipDenomination(int64 NewDenomination);
+
 protected:
 	virtual void BeginPlay() override;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Craps|Pawn|Betting")
+	TObjectPtr<ABetZone> HoveredBetZone = nullptr;
 
 	UFUNCTION()
 	void HandleSingleDieSettled(ADieBase* Die, EDieFaceDirection TopDirection, int32 TopValue, UPDA_DiceFace* TopFaceData);
@@ -263,6 +284,7 @@ private:
 	void UpdateStickmanPushBack(float DeltaTime);
 	void UpdateOnFeltDiceRotationSlerp(float DeltaTime);
 	void UpdateThrowChargingAndTrajectory(float DeltaTime);
+	void UpdateCursorHoverRaycast();
 
 	// Input Handlers
 	void Input_PitchUp();
@@ -274,6 +296,9 @@ private:
 	void Input_MouseWheel(const struct FInputActionValue& Value);
 	void Input_MouseWheelUp();
 	void Input_MouseWheelDown();
+	void Input_RightClickPress();
+	void Input_CycleDenominationUp();
+	void Input_CycleDenominationDown();
 	void Input_Preset1();
 	void Input_Preset2();
 	void Input_Preset3();

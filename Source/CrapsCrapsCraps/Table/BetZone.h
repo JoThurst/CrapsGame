@@ -132,8 +132,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Craps|BetZone")
 	float GetEffectiveBetMultiplier() const;
 
+	/** Sets whether the player's cursor is currently hovering over this bet zone. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|BetZone")
+	void SetHovered(bool bInHovered);
+
+	UFUNCTION(BlueprintPure, Category = "Craps|BetZone")
+	bool IsHovered() const { return bIsHovered; }
+
 protected:
 	virtual void BeginPlay() override;
+
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Craps|BetZone")
+	bool bIsHovered = false;
 
 	/** Collision bounds for clicking/placing chips and visualizing the felt zone. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
