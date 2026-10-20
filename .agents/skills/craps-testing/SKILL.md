@@ -18,5 +18,5 @@ Run the automation tests using `UnrealEditor-Cmd.exe` via PowerShell:
 ## Parsing Test Results
 
 - Search for `Automation Test Queue Empty` or `Test Results:` in the output.
-- All tests matching filter `Craps` (including `Craps.Betting.*`, `Craps.Dice.*`, `Craps.Physics.*`, `Craps.Progression.*`) will be reported with `Success` or `Failed`.
-- Total expected tests: 29.
+- All tests matching filter `Craps` (including `Craps.Betting.*`, `Craps.Dice.*`, `Craps.InteractiveBetting.*`, `Craps.Physics.*`, `Craps.Progression.*`, `Craps.Rules.*`, `Craps.Scoring.*`, `Craps.Table.*`, and `Craps.Trinkets.*`) will be reported with `Success` or `Failed`.
+- Total baseline tests: 36 (all expected to pass with exit code 0).
