@@ -54,6 +54,8 @@ ACrapsPawn::ACrapsPawn()
 	RightHandShooterAnchor->SetRelativeRotation(FRotator(0.0f, -15.0f, 0.0f));
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CyberArmFinder(TEXT("/Game/Meshes/SM_CyberArm_Left.SM_CyberArm_Left"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> WhiskeyTumblerFinder(TEXT("/Game/Meshes/SM_RailProp_WhiskeyTumbler.SM_RailProp_WhiskeyTumbler"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> SignetRingFinder(TEXT("/Game/Meshes/SM_TrinketRing_Signet.SM_TrinketRing_Signet"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -85,12 +87,14 @@ ACrapsPawn::ACrapsPawn()
 	LeftForearmMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 2. Wristwear Cyber-Chrono Cuff
+	// Integrated into SM_CyberArm_Left when present; fallback cylinder is kept small and non-obstructive
 	LeftWristMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftWristMesh"));
 	LeftWristMesh->SetupAttachment(LeftHandRailAnchor);
 	if (CylinderFinder.Succeeded()) LeftWristMesh->SetStaticMesh(CylinderFinder.Object);
 	LeftWristMesh->SetRelativeLocation(FVector(-2.0f, 0.0f, 4.0f));
 	LeftWristMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
-	LeftWristMesh->SetRelativeScale3D(FVector(0.12f, 0.12f, 0.05f));
+	LeftWristMesh->SetRelativeScale3D(FVector(0.035f, 0.035f, 0.015f));
+	LeftWristMesh->SetVisibility(false);
 	LeftWristMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 3. Palm resting flat on the table rail (fallback if no custom mesh)
@@ -121,20 +125,40 @@ ACrapsPawn::ACrapsPawn()
 
 		UStaticMeshComponent* RingMesh = CreateDefaultSubobject<UStaticMeshComponent>(*FString::Printf(TEXT("LeftRingMesh_%d"), i));
 		RingMesh->SetupAttachment(LeftHandRailAnchor);
-		if (CylinderFinder.Succeeded()) RingMesh->SetStaticMesh(CylinderFinder.Object);
-		RingMesh->SetRelativeLocation(FVector(FingerOffsetsX[i], FingerOffsetsY[i], FingerOffsetsZ[i]));
-		RingMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
-		RingMesh->SetRelativeScale3D(FVector(0.065f, 0.065f, 0.035f));
+		if (SignetRingFinder.Succeeded())
+		{
+			RingMesh->SetStaticMesh(SignetRingFinder.Object);
+			RingMesh->SetRelativeLocation(FVector(FingerOffsetsX[i] - 0.2f, FingerOffsetsY[i], FingerOffsetsZ[i] + 0.1f));
+			RingMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+			RingMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+		}
+		else
+		{
+			if (CylinderFinder.Succeeded()) RingMesh->SetStaticMesh(CylinderFinder.Object);
+			RingMesh->SetRelativeLocation(FVector(FingerOffsetsX[i], FingerOffsetsY[i], FingerOffsetsZ[i]));
+			RingMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
+			RingMesh->SetRelativeScale3D(FVector(0.045f, 0.045f, 0.025f));
+		}
 		RingMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		LeftRingMeshes.Add(RingMesh);
 	}
 
-	// 5. Rail Prop (Whiskey tumbler / Ashtray totem resting on rail)
+	// 5. Rail Prop (Whiskey tumbler resting neatly down on the drink rail armrest, clear of the hand)
 	LeftRailPropMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftRailPropMesh"));
 	LeftRailPropMesh->SetupAttachment(LeftHandRailAnchor);
-	if (CylinderFinder.Succeeded()) LeftRailPropMesh->SetStaticMesh(CylinderFinder.Object);
-	LeftRailPropMesh->SetRelativeLocation(FVector(6.0f, -14.0f, 3.0f));
-	LeftRailPropMesh->SetRelativeScale3D(FVector(0.10f, 0.10f, 0.14f));
+	if (WhiskeyTumblerFinder.Succeeded())
+	{
+		LeftRailPropMesh->SetStaticMesh(WhiskeyTumblerFinder.Object);
+		LeftRailPropMesh->SetRelativeLocation(FVector(10.0f, -38.0f, -2.0f));
+		LeftRailPropMesh->SetRelativeRotation(FRotator(0.0f, 15.0f, 0.0f));
+		LeftRailPropMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+	}
+	else
+	{
+		if (CylinderFinder.Succeeded()) LeftRailPropMesh->SetStaticMesh(CylinderFinder.Object);
+		LeftRailPropMesh->SetRelativeLocation(FVector(10.0f, -38.0f, -2.0f));
+		LeftRailPropMesh->SetRelativeScale3D(FVector(0.08f, 0.08f, 0.10f));
+	}
 	LeftRailPropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Visible Graybox Right Hand (Active Shooter Hand hovering beside the dice)
@@ -1156,7 +1180,16 @@ void ACrapsPawn::Input_RollRight()  { RotateDiceOnFelt90Degrees(FVector::Forward
 
 void ACrapsPawn::Input_MouseWheelUp()
 {
-	if (HoveredBetZone && CurrentPhase == ECrapsThrowPhase::OnFeltSetting)
+	bool bBoardOpen = false;
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
+		{
+			bBoardOpen = HUD->IsBettingBoardOpen();
+		}
+	}
+
+	if (bBoardOpen || HoveredBetZone || CurrentPhase == ECrapsThrowPhase::OnFeltSetting)
 	{
 		CycleChipDenomination(1);
 		return;
@@ -1166,7 +1199,16 @@ void ACrapsPawn::Input_MouseWheelUp()
 
 void ACrapsPawn::Input_MouseWheelDown()
 {
-	if (HoveredBetZone && CurrentPhase == ECrapsThrowPhase::OnFeltSetting)
+	bool bBoardOpen = false;
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
+		{
+			bBoardOpen = HUD->IsBettingBoardOpen();
+		}
+	}
+
+	if (bBoardOpen || HoveredBetZone || CurrentPhase == ECrapsThrowPhase::OnFeltSetting)
 	{
 		CycleChipDenomination(-1);
 		return;
@@ -1507,9 +1549,9 @@ void ACrapsPawn::Input_RightClickPress()
 
 void ACrapsPawn::CycleChipDenomination(int32 Direction)
 {
-	static const int64 Denominations[] = { 10, 25, 50, 100, 500 };
+	static const int64 Denominations[] = { 1, 5, 25, 100, 500, 1000 };
 	const int32 Count = UE_ARRAY_COUNT(Denominations);
-	int32 CurrentIndex = 2; // Default 50
+	int32 CurrentIndex = 2; // Default 25
 	for (int32 i = 0; i < Count; ++i)
 	{
 		if (Denominations[i] == SelectedChipDenomination)
@@ -1529,6 +1571,14 @@ void ACrapsPawn::CycleChipDenomination(int32 Direction)
 	}
 
 	SelectedChipDenomination = Denominations[CurrentIndex];
+
+	if (UWorld* World = GetWorld())
+	{
+		if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
+		{
+			GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("CHIP SELECTED: [$%lld]"), SelectedChipDenomination));
+		}
+	}
 }
 
 void ACrapsPawn::SetChipDenomination(int64 NewDenomination)
@@ -1729,14 +1779,16 @@ void ACrapsPawn::UpdateTrinketVisuals()
 	};
 
 	// 1. Cybernetic Hand Finish
+	const bool bWristEquipped = TrinketInventory && (TrinketInventory->GetEquippedTrinket(ETrinketSlotType::WristwearActive, 0) != nullptr);
+
 	if (LeftForearmMesh && LeftForearmMesh->GetNumMaterials() >= 4)
 	{
 		// Slot 0: Matte Charcoal Titanium Armor
 		SetCompColorSlot(LeftForearmMesh, 0, FLinearColor(0.035f, 0.040f, 0.045f));
 		// Slot 1: Brushed Gunmetal Joint Hydraulics
 		SetCompColorSlot(LeftForearmMesh, 1, FLinearColor(0.080f, 0.085f, 0.095f));
-		// Slot 2: Glowing Cyan Neon Power Conduit
-		SetCompColorSlot(LeftForearmMesh, 2, FLinearColor(0.0f, 0.85f, 1.0f));
+		// Slot 2: Glowing Neon Power Conduit & Chrono Screen (Amber/Gold when wristwear active, otherwise Cyan)
+		SetCompColorSlot(LeftForearmMesh, 2, bWristEquipped ? FLinearColor(1.0f, 0.65f, 0.08f) : FLinearColor(0.0f, 0.85f, 1.0f));
 		// Slot 3: Brushed Brass / Gold Trim
 		SetCompColorSlot(LeftForearmMesh, 3, FLinearColor(1.0f, 0.78f, 0.12f));
 	}
@@ -1750,7 +1802,7 @@ void ACrapsPawn::UpdateTrinketVisuals()
 		}
 	}
 
-	// 2. Knuckle Rings (0 = Neon Cyan, 1 = Royal Cobalt, 2 = Synth Violet, 3 = Brilliant Gold)
+	// 2. Knuckle Signet Rings (0 = Neon Cyan, 1 = Royal Cobalt, 2 = Synth Violet, 3 = Brilliant Gold)
 	const FLinearColor RingColors[4] = {
 		FLinearColor(0.0f, 0.85f, 1.0f),    // Index: Neon Signet (Cyan)
 		FLinearColor(0.12f, 0.40f, 1.0f),   // Middle: Cobalt Band (Royal Blue)
@@ -1769,29 +1821,37 @@ void ACrapsPawn::UpdateTrinketVisuals()
 		LeftRingMeshes[i]->SetVisibility(bEquipped);
 		if (bEquipped)
 		{
-			SetCompColorSlot(LeftRingMeshes[i], 0, RingColors[FMath::Clamp(i, 0, 3)]);
+			// Slot 0: Polished Vegas Gold Band; Slot 1: Emissive Cut Gemstone Face
+			SetCompColorSlot(LeftRingMeshes[i], 0, FLinearColor(1.0f, 0.80f, 0.15f));
+			SetCompColorSlot(LeftRingMeshes[i], 1, RingColors[FMath::Clamp(i, 0, 3)]);
 		}
 	}
 
-	// 3. Wristwear Cyber-Chrono Cuff (Amber)
+	// 3. Wristwear Cyber-Chrono Cuff (integrated into SM_CyberArm_Left when custom mesh is loaded)
 	if (LeftWristMesh)
 	{
-		const bool bWristEquipped = TrinketInventory && (TrinketInventory->GetEquippedTrinket(ETrinketSlotType::WristwearActive, 0) != nullptr);
-		LeftWristMesh->SetVisibility(bWristEquipped);
-		if (bWristEquipped)
+		// Only display separate fallback cylinder if no custom cyber-arm exists
+		const bool bShowFallbackWrist = bWristEquipped && (LeftForearmMesh && LeftForearmMesh->GetNumMaterials() < 4);
+		LeftWristMesh->SetVisibility(bShowFallbackWrist);
+		if (bShowFallbackWrist)
 		{
 			SetCompColorSlot(LeftWristMesh, 0, FLinearColor(0.95f, 0.55f, 0.10f));
 		}
 	}
 
-	// 4. Rail Prop (Whiskey Tumbler - Glowing Amber)
+	// 4. Rail Prop (Whiskey Tumbler - Faceted Crystal Glass + Glowing Bourbon)
 	if (LeftRailPropMesh)
 	{
 		const bool bPropEquipped = TrinketInventory && (TrinketInventory->GetEquippedTrinket(ETrinketSlotType::RailProp, 0) != nullptr);
 		LeftRailPropMesh->SetVisibility(bPropEquipped);
 		if (bPropEquipped)
 		{
-			SetCompColorSlot(LeftRailPropMesh, 0, FLinearColor(0.85f, 0.40f, 0.05f));
+			// Slot 0: Crystal glass
+			SetCompColorSlot(LeftRailPropMesh, 0, FLinearColor(0.85f, 0.90f, 0.95f));
+			// Slot 1: Amber bourbon liquid
+			SetCompColorSlot(LeftRailPropMesh, 1, FLinearColor(1.0f, 0.55f, 0.05f));
+			// Slot 2: Floating ice cube
+			SetCompColorSlot(LeftRailPropMesh, 2, FLinearColor(0.75f, 0.90f, 1.0f));
 		}
 	}
 }

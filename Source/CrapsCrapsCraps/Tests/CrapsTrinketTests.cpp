@@ -377,4 +377,32 @@ bool FCrapsBalatroRollBreakdownTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// 9. Test Bankroll Financial Ledger Breakdown & Cash Dividend Transparency
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsBankrollCashBreakdownTest, "Craps.Trinkets.BankrollCashBreakdownTransparency", EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+bool FCrapsBankrollCashBreakdownTest::RunTest(const FString& Parameters)
+{
+	ACrapsGameState* GS = NewObject<ACrapsGameState>();
+	TestNotNull(TEXT("GameState instantiated"), GS);
+	if (!GS)
+	{
+		return false;
+	}
+
+	GS->SetPlayerBankroll(500);
+	GS->SetUnbankedPool(1000);
+
+	// Bank the 1,000 combo score: with 5% dividend, awards +$50 cash
+	GS->BankUnbankedPool();
+
+	const FRollBankrollBreakdown& BBD = GS->GetLastBankrollBreakdown();
+	TestTrue(TEXT("Bankroll breakdown has data"), BBD.bHasData);
+	TestEqual(TEXT("Starting cash was 500"), BBD.StartingCash, 500LL);
+	TestEqual(TEXT("Cash dividend awarded was 50"), BBD.CashDividendAwarded, 50LL);
+	TestEqual(TEXT("Ending cash is 550"), BBD.EndingCash, 550LL);
+	TestEqual(TEXT("Unbanked score is 0 after banking"), BBD.UnbankedScore, 0LL);
+	TestTrue(TEXT("Action summary explains banking event"), BBD.ActionSummary.Contains(TEXT("Banked")));
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

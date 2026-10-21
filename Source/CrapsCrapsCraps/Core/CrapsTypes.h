@@ -375,3 +375,43 @@ struct CRAPSCRAPSCRAPS_API FRollScoringBreakdown
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
 	bool bHasData = false;
 };
+
+/**
+ * Detailed financial transparency breakdown for spendable cash bankroll.
+ * Itemizes wager commitments, returned principals, cash dividends, and unbanked score.
+ */
+USTRUCT(BlueprintType)
+struct CRAPSCRAPSCRAPS_API FRollBankrollBreakdown
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 StartingCash = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 ActiveWagersTotal = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 ReturnedWagers = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 CashDividendAwarded = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 EndingCash = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 UnbankedScore = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 AnteProgressScore = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	int64 AnteQuota = 2500;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	FString ActionSummary;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
+	bool bHasData = false;
+};

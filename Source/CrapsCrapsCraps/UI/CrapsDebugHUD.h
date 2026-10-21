@@ -60,13 +60,15 @@ protected:
 		PressAll,
 		ClearBets,
 		BankPool,
-		Close
+		Close,
+		SelectDenomination
 	};
 
 	struct FCrapsBetSlotClickArea
 	{
 		EBetBoardActionType ActionType = EBetBoardActionType::BetSlot;
 		ECrapsBetType BetType = ECrapsBetType::PassLine;
+		int64 DenominationValue = 0;
 		FString DisplayName;
 		float X = 0.0f;
 		float Y = 0.0f;

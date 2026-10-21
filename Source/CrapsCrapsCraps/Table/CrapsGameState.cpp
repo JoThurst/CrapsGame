@@ -483,6 +483,31 @@ void ACrapsGameState::ResolveSettledRoll(
 	LastRollBreakdown.bHasData = true;
 
 	UnbankedComboPool += AuthoritativePayout;
+
+	// Populate Financial Cash Breakdown (Milestone: Bankroll Transparency)
+	int64 TotalWagersOnTable = 0;
+	for (const ABetZone* ActiveZ : ActiveBetZones)
+	{
+		if (ActiveZ)
+		{
+			TotalWagersOnTable += ActiveZ->GetPlacedWager();
+		}
+	}
+
+	const int64 ProjectedDividend = bEnableScoreCashSeparation ?
+		FMath::Max<int64>(MinCashDividendPerBank, FMath::RoundToInt64(UnbankedComboPool * ScoreToCashDividendRatio)) :
+		UnbankedComboPool;
+
+	LastBankrollBreakdown.bHasData = true;
+	LastBankrollBreakdown.StartingCash = PlayerBankroll;
+	LastBankrollBreakdown.ActiveWagersTotal = TotalWagersOnTable;
+	LastBankrollBreakdown.ReturnedWagers = AuthBetChipsTotal;
+	LastBankrollBreakdown.CashDividendAwarded = ProjectedDividend;
+	LastBankrollBreakdown.EndingCash = PlayerBankroll;
+	LastBankrollBreakdown.UnbankedScore = UnbankedComboPool;
+	LastBankrollBreakdown.AnteQuota = CurrentAnteQuota;
+	LastBankrollBreakdown.ActionSummary = FString::Printf(TEXT("Roll %d Resolved: +%lld Combo Score (+%lld Projected Cash)"), RollSum, AuthoritativePayout, ProjectedDividend);
+
 	OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
 
 	// Start presentation animation in the scoring queue
@@ -529,6 +554,7 @@ int64 ACrapsGameState::BankUnbankedPool()
 	}
 
 	const int64 BankedScore = UnbankedComboPool;
+	const int64 PreBankCash = PlayerBankroll;
 
 	// Option B: Score Chips vs. Spendable Bankroll Separation.
 	// 1. Authoritative combo score chips are deposited into Ante Progress
@@ -554,6 +580,16 @@ int64 ACrapsGameState::BankUnbankedPool()
 	}
 
 	UnbankedComboPool = 0;
+
+	// Update Financial Ledger Card
+	LastBankrollBreakdown.bHasData = true;
+	LastBankrollBreakdown.StartingCash = PreBankCash;
+	LastBankrollBreakdown.CashDividendAwarded = CashAwarded;
+	LastBankrollBreakdown.EndingCash = PlayerBankroll;
+	LastBankrollBreakdown.UnbankedScore = 0;
+	LastBankrollBreakdown.AnteProgressScore = PlayerBankroll;
+	LastBankrollBreakdown.AnteQuota = CurrentAnteQuota;
+	LastBankrollBreakdown.ActionSummary = FString::Printf(TEXT("Banked +%lld Score -> +$%lld Cash Awarded!"), BankedScore, CashAwarded);
 	OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
 	OnBankedPayoutVisuals.Broadcast(BankedScore, CashAwarded);
 
@@ -642,6 +678,21 @@ bool ACrapsGameState::PlaceWager(ABetZone* Zone, int64 Amount)
 
 	PlayerBankroll -= Amount;
 	Zone->AddWager(Amount);
+
+	int64 TotalWagers = 0;
+	for (const ABetZone* ActiveZ : ActiveBetZones)
+	{
+		if (ActiveZ)
+		{
+			TotalWagers += ActiveZ->GetPlacedWager();
+		}
+	}
+	LastBankrollBreakdown.bHasData = true;
+	LastBankrollBreakdown.ActiveWagersTotal = TotalWagers;
+	LastBankrollBreakdown.EndingCash = PlayerBankroll;
+	LastBankrollBreakdown.UnbankedScore = UnbankedComboPool;
+	LastBankrollBreakdown.ActionSummary = FString::Printf(TEXT("Placed +$%lld on %s (Cash: $%lld)"), Amount, *Zone->GetZoneName(), PlayerBankroll);
+
 	OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
 	return true;
 }
@@ -669,6 +720,22 @@ bool ACrapsGameState::RemoveWager(ABetZone* Zone, int64 Amount, int64& OutRefund
 	Zone->AddWager(-ActualRefund);
 	PlayerBankroll += ActualRefund;
 	OutRefundedAmount = ActualRefund;
+
+	int64 TotalWagers = 0;
+	for (const ABetZone* ActiveZ : ActiveBetZones)
+	{
+		if (ActiveZ)
+		{
+			TotalWagers += ActiveZ->GetPlacedWager();
+		}
+	}
+	LastBankrollBreakdown.bHasData = true;
+	LastBankrollBreakdown.ActiveWagersTotal = TotalWagers;
+	LastBankrollBreakdown.ReturnedWagers += ActualRefund;
+	LastBankrollBreakdown.EndingCash = PlayerBankroll;
+	LastBankrollBreakdown.UnbankedScore = UnbankedComboPool;
+	LastBankrollBreakdown.ActionSummary = FString::Printf(TEXT("Refunded +$%lld from %s (Cash: $%lld)"), ActualRefund, *Zone->GetZoneName(), PlayerBankroll);
+
 	OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);
 	return true;
 }

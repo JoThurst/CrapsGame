@@ -281,11 +281,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|Betting")
 	ABetZone* GetHoveredBetZone() const { return HoveredBetZone; }
 
-	/** Currently selected chip denomination for placement ($10, $25, $50, $100, $500). */
+	/** Currently selected chip denomination for placement ($1, $5, $25, $100, $500, $1,000). */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Pawn|Betting")
-	int64 SelectedChipDenomination = 50;
+	int64 SelectedChipDenomination = 25;
 
-	/** Cycles through available chip denominations: $10, $25, $50, $100, $500. */
+	/** Cycles through available chip denominations: $1, $5, $25, $100, $500, $1,000. */
 	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Betting")
 	void CycleChipDenomination(int32 Direction = 1);
 

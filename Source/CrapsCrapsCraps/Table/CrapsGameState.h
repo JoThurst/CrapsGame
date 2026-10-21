@@ -128,6 +128,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Craps|Scoring")
 	const FRollScoringBreakdown& GetLastRollBreakdown() const { return LastRollBreakdown; }
 
+	/** Returns the structured financial breakdown for spendable cash bankroll. */
+	UFUNCTION(BlueprintPure, Category = "Craps|Economy")
+	const FRollBankrollBreakdown& GetLastBankrollBreakdown() const { return LastBankrollBreakdown; }
+
 	const TArray<TObjectPtr<ABetZone>>& GetActiveBetZones() const { return ActiveBetZones; }
 
 	/** Refunds only legitimately refundable active wagers back to PlayerBankroll. */
@@ -195,6 +199,10 @@ protected:
 	/** Structured Balatro-style scoring breakdown for the last settled roll. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Scoring")
 	FRollScoringBreakdown LastRollBreakdown;
+
+	/** Structured financial breakdown for spendable cash bankroll. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Economy")
+	FRollBankrollBreakdown LastBankrollBreakdown;
 
 	/** Unbanked combo pool riding on the table (wiped on Seven-Out!). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Economy")

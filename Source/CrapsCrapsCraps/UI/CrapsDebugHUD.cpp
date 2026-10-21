@@ -48,8 +48,9 @@ void ACrapsDebugHUD::DrawHUD()
 	const FLinearColor CyanColor(0.0f, 0.96f, 0.83f, 1.0f);     // #00F5D4 Layer 1: Base Chips
 	const FLinearColor MagentaColor(1.0f, 0.16f, 0.52f, 1.0f);  // #FF2A85 Layer 2: Throw Mult / Hazards
 	const FLinearColor GoldColor(1.0f, 0.72f, 0.01f, 1.0f);     // #FFB703 Layer 3: Bet Mult / Bankroll
-	const FLinearColor CrimsonColor(1.0f, 0.12f, 0.26f, 1.0f);  // #FF1E42 Seven-Out Danger
 	const FLinearColor WhiteColor(0.92f, 0.94f, 0.98f, 1.0f);
+	const FLinearColor DimWhite(0.65f, 0.70f, 0.78f, 1.0f);
+	const FLinearColor CrimsonColor(1.0f, 0.12f, 0.26f, 1.0f);  // #FF1E42 Seven-Out Danger
 
 	const float MinScale = 0.38f;
 	const float AspectRatioScale = FMath::Min(Canvas->SizeX / 1920.0f, Canvas->SizeY / 1080.0f);
@@ -417,6 +418,64 @@ void ACrapsDebugHUD::DrawHUD()
 			GoldColor, MarginLeft, CurY, Font, 0.94f * UiScale, false);
 	}
 
+	// Balatro-Style Neon Bankroll Financial Ledger Card (Milestone: Spendable Cash Transparency)
+	if (CrapsGS && CrapsGS->GetLastBankrollBreakdown().bHasData)
+	{
+		const FRollBankrollBreakdown& BBD = CrapsGS->GetLastBankrollBreakdown();
+		const float BankCardW = (bStreamlinedHUD ? 360.0f : 430.0f) * UiScale;
+		const float BankCardH = 120.0f * UiScale;
+		const float BankCardX = Canvas->SizeX - BankCardW - 16.0f;
+		const float BreakdownOffset = (CrapsGS->GetLastRollBreakdown().bHasData) ?
+			(92.0f + (CrapsGS->GetLastRollBreakdown().Steps.Num() * 17.0f) + 12.0f) * UiScale : 0.0f;
+		const float BankCardY = ScoreY + ScoreH + 38.0f + BreakdownOffset;
+
+		// CRT Noir Glass Panel with Glowing Cyber Borders
+		DrawRect(FLinearColor(0.010f, 0.016f, 0.024f, 0.92f), BankCardX, BankCardY, BankCardW, BankCardH);
+		DrawLine(BankCardX, BankCardY, BankCardX + BankCardW, BankCardY, GoldColor, 1.5f);
+		DrawLine(BankCardX, BankCardY + BankCardH, BankCardX + BankCardW, BankCardY + BankCardH, CyanColor, 1.5f);
+		DrawLine(BankCardX, BankCardY, BankCardX, BankCardY + BankCardH, GoldColor, 1.5f);
+		DrawLine(BankCardX + BankCardW, BankCardY, BankCardX + BankCardW, BankCardY + BankCardH, CyanColor, 1.5f);
+
+		float CurBY = BankCardY + 8.0f * UiScale;
+		const float BMarginLeft = BankCardX + 12.0f * UiScale;
+
+		// 1. Header: BANKROLL CASH LEDGER
+		DrawText(
+			TEXT("BANKROLL CASH LEDGER // SPENDABLE MONEY"),
+			GoldColor, BMarginLeft, CurBY, Font, 0.90f * UiScale, false);
+		CurBY += 18.0f * UiScale;
+
+		// 2. Spendable Cash Available
+		DrawText(
+			FString::Printf(TEXT("SPENDABLE BANKROLL:   $%lld"), CrapsGS->GetPlayerBankroll()),
+			WhiteColor, BMarginLeft, CurBY, Font, 0.86f * UiScale, false);
+		CurBY += 16.0f * UiScale;
+
+		// 3. Active Wagers Riding on Felt
+		DrawText(
+			FString::Printf(TEXT("• Active Bets Placed:         -$%lld"), BBD.ActiveWagersTotal),
+			(BBD.ActiveWagersTotal > 0 ? CyanColor : DimWhite), BMarginLeft, CurBY, Font, 0.78f * UiScale, false);
+		CurBY += 15.0f * UiScale;
+
+		// 4. Cash Dividend / Returned Principal
+		DrawText(
+			FString::Printf(TEXT("• Cash Dividend (5%% of Score):  +$%lld"), BBD.CashDividendAwarded),
+			GoldColor, BMarginLeft, CurBY, Font, 0.78f * UiScale, false);
+		CurBY += 15.0f * UiScale;
+
+		// 5. Unbanked Combo Pool
+		DrawText(
+			FString::Printf(TEXT("• Unbanked Combo Pool:        +%lld Chips (Riding)"), CrapsGS->GetUnbankedPool()),
+			(CrapsGS->GetUnbankedPool() > 0 ? MagentaColor : DimWhite), BMarginLeft, CurBY, Font, 0.78f * UiScale, false);
+		CurBY += 16.0f * UiScale;
+
+		// 6. Action status message
+		if (!BBD.ActionSummary.IsEmpty())
+		{
+			DrawText(BBD.ActionSummary, CyanColor, BMarginLeft, CurBY, Font, 0.74f * UiScale, false);
+		}
+	}
+
 	// Project floating 3D pop-up text in world space above the dice
 	if (ScoringQueue)
 	{
@@ -601,8 +660,8 @@ void ACrapsDebugHUD::DrawBettingBoard(
 	const FLinearColor DimWhite(0.65f, 0.70f, 0.78f, 1.0f);
 
 	// Panel Size & Placement
-	const float BoardW = FMath::Clamp(Canvas->SizeX * 0.76f, 760.0f * UiScale, 1040.0f * UiScale);
-	const float BoardH = FMath::Clamp(Canvas->SizeY * 0.64f, 440.0f * UiScale, 560.0f * UiScale);
+	const float BoardW = FMath::Clamp(Canvas->SizeX * 0.78f, 780.0f * UiScale, 1080.0f * UiScale);
+	const float BoardH = FMath::Clamp(Canvas->SizeY * 0.72f, 490.0f * UiScale, 630.0f * UiScale);
 	const float BoardX = (Canvas->SizeX - BoardW) * 0.5f;
 	const float BoardY = (Canvas->SizeY - BoardH) * 0.5f;
 
@@ -827,7 +886,50 @@ void ACrapsDebugHUD::DrawBettingBoard(
 	}
 	CurrentY += PropSlotH + 12.0f * UiScale;
 
-	// Section 4: Action Footer Buttons (Clear All, Press All, Bank Pool, Close)
+	// Section 4: Interactive Chip Denomination Bar
+	DrawText(TEXT("SELECT CHIP DENOMINATION // CLICK OR SCROLL WHEEL / [T]:"), GoldColor, BoardX + MarginX, CurrentY - 2.0f, Font, 0.80f * UiScale, false);
+	CurrentY += 15.0f * UiScale;
+
+	static const int64 DenomValues[] = { 1, 5, 25, 100, 500, 1000 };
+	static const TCHAR* DenomLabels[] = { TEXT("$1 (White)"), TEXT("$5 (Red)"), TEXT("$25 (Green)"), TEXT("$100 (Black)"), TEXT("$500 (Purple)"), TEXT("$1k (Cyan)") };
+	const int32 NumDenoms = UE_ARRAY_COUNT(DenomValues);
+	const float DenomGap = 8.0f * UiScale;
+	const float DenomBtnW = (ContentW - (DenomGap * (NumDenoms - 1))) / static_cast<float>(NumDenoms);
+	const float DenomBtnH = 30.0f * UiScale;
+
+	for (int32 i = 0; i < NumDenoms; ++i)
+	{
+		const float DX = BoardX + MarginX + i * (DenomBtnW + DenomGap);
+		const float DY = CurrentY;
+		const bool bSelected = (CrapsPawn->SelectedChipDenomination == DenomValues[i]);
+		const bool bHover = (MousePos.X >= DX && MousePos.X <= DX + DenomBtnW &&
+		                     MousePos.Y >= DY && MousePos.Y <= DY + DenomBtnH);
+
+		FLinearColor ChipBase, ChipInlay, ChipStripe;
+		ACrapsFlyingChipActor::GetDenominationColors(DenomValues[i], ChipBase, ChipInlay, ChipStripe);
+
+		DrawRect(bSelected ? ChipBase * 0.45f : (bHover ? CardHoverBg : CardBg), DX, DY, DenomBtnW, DenomBtnH);
+		DrawLine(DX, DY, DX + DenomBtnW, DY, bSelected ? GoldColor : ChipBase, bSelected ? 2.5f : 1.2f);
+		DrawLine(DX, DY + DenomBtnH, DX + DenomBtnW, DY + DenomBtnH, bSelected ? GoldColor : ChipBase, bSelected ? 2.5f : 1.2f);
+		DrawLine(DX, DY, DX, DY + DenomBtnH, bSelected ? GoldColor : ChipBase, bSelected ? 2.5f : 1.2f);
+		DrawLine(DX + DenomBtnW, DY, DX + DenomBtnW, DY + DenomBtnH, bSelected ? GoldColor : ChipBase, bSelected ? 2.5f : 1.2f);
+
+		const FString DText = bSelected ? FString::Printf(TEXT("[%s] ACTIVE"), DenomLabels[i]) : FString(DenomLabels[i]);
+		DrawText(DText, bSelected ? GoldColor : (bHover ? WhiteColor : ChipBase), DX + 5.0f * UiScale, DY + 7.0f * UiScale, Font, 0.72f * UiScale, false);
+
+		FCrapsBetSlotClickArea DenomArea;
+		DenomArea.ActionType = EBetBoardActionType::SelectDenomination;
+		DenomArea.DenominationValue = DenomValues[i];
+		DenomArea.DisplayName = DenomLabels[i];
+		DenomArea.X = DX;
+		DenomArea.Y = DY;
+		DenomArea.W = DenomBtnW;
+		DenomArea.H = DenomBtnH;
+		CachedBetSlotClickAreas.Add(DenomArea);
+	}
+	CurrentY += DenomBtnH + 12.0f * UiScale;
+
+	// Section 5: Action Footer Buttons (Clear All, Press All, Bank Pool, Close)
 	const float ActionGap = 10.0f * UiScale;
 	const float ActionBtnW = (ContentW - (ActionGap * 3.0f)) / 4.0f;
 	const float ActionBtnH = 34.0f * UiScale;
@@ -908,6 +1010,11 @@ bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bI
 
 			case EBetBoardActionType::ClearBets:
 				CrapsGS->RefundAllEligibleWagers();
+				return true;
+
+			case EBetBoardActionType::SelectDenomination:
+				CrapsPawn->SetChipDenomination(Area.DenominationValue);
+				CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("CHIP SELECTED: [$%lld]"), Area.DenominationValue));
 				return true;
 
 			case EBetBoardActionType::BetSlot:

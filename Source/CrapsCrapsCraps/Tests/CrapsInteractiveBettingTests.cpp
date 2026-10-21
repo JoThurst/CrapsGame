@@ -96,9 +96,9 @@ IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsDenominationCyclingTest, "Craps.Interacti
 bool FCrapsDenominationCyclingTest::RunTest(const FString& Parameters)
 {
 	ACrapsPawn* Pawn = NewObject<ACrapsPawn>();
-	TestEqual(TEXT("Default denomination is 50"), Pawn->SelectedChipDenomination, 50LL);
+	TestEqual(TEXT("Default denomination is 25"), Pawn->SelectedChipDenomination, 25LL);
 
-	// Cycle forward (50 -> 100 -> 500 -> 10 -> 25 -> 50)
+	// Cycle forward (25 -> 100 -> 500 -> 1000 -> 1 -> 5 -> 25)
 	Pawn->CycleChipDenomination(1);
 	TestEqual(TEXT("Cycle forward to 100"), Pawn->SelectedChipDenomination, 100LL);
 
@@ -106,17 +106,26 @@ bool FCrapsDenominationCyclingTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Cycle forward to 500"), Pawn->SelectedChipDenomination, 500LL);
 
 	Pawn->CycleChipDenomination(1);
-	TestEqual(TEXT("Cycle forward wraps to 10"), Pawn->SelectedChipDenomination, 10LL);
+	TestEqual(TEXT("Cycle forward to 1000"), Pawn->SelectedChipDenomination, 1000LL);
+
+	Pawn->CycleChipDenomination(1);
+	TestEqual(TEXT("Cycle forward wraps to 1"), Pawn->SelectedChipDenomination, 1LL);
+
+	Pawn->CycleChipDenomination(1);
+	TestEqual(TEXT("Cycle forward to 5"), Pawn->SelectedChipDenomination, 5LL);
 
 	Pawn->CycleChipDenomination(1);
 	TestEqual(TEXT("Cycle forward to 25"), Pawn->SelectedChipDenomination, 25LL);
 
-	// Cycle backward (25 -> 10 -> 500)
+	// Cycle backward (25 -> 5 -> 1 -> 1000)
 	Pawn->CycleChipDenomination(-1);
-	TestEqual(TEXT("Cycle backward to 10"), Pawn->SelectedChipDenomination, 10LL);
+	TestEqual(TEXT("Cycle backward to 5"), Pawn->SelectedChipDenomination, 5LL);
 
 	Pawn->CycleChipDenomination(-1);
-	TestEqual(TEXT("Cycle backward wraps to 500"), Pawn->SelectedChipDenomination, 500LL);
+	TestEqual(TEXT("Cycle backward to 1"), Pawn->SelectedChipDenomination, 1LL);
+
+	Pawn->CycleChipDenomination(-1);
+	TestEqual(TEXT("Cycle backward wraps to 1000"), Pawn->SelectedChipDenomination, 1000LL);
 
 	// Direct assignment
 	Pawn->SetChipDenomination(250);
