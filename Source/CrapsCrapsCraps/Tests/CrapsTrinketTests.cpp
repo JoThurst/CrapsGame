@@ -6,6 +6,7 @@
 #include "Items/TrinketInventoryComponent.h"
 #include "Table/CrapsGameState.h"
 #include "Core/CrapsTypes.h"
+#include "Pawn/CrapsPawn.h"
 
 #if WITH_DEV_AUTOMATION_TESTS
 
@@ -260,6 +261,57 @@ bool FCrapsTrinketGameStateIntegrationTest::RunTest(const FString& Parameters)
 	// Base 90 chips * (1.0 base + 0.5 wall) = 135 chips (Standard payout without trinkets)
 	GS->ResolveSettledRoll(4, 40, FVector::ZeroVector, 5, 50, FVector::ZeroVector, true, 1);
 	TestEqual(TEXT("Standard roll without trinkets pays 135 chips"), GS->GetUnbankedPool(), 135LL);
+
+	return true;
+}
+
+// 7. Test Left-Hand 3D Rig Positioning, Components & Free-Look Mode
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsLeftHandVisualRigTest, "Craps.Trinkets.LeftHandRigAndFreeLook", EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+bool FCrapsLeftHandVisualRigTest::RunTest(const FString& Parameters)
+{
+	ACrapsPawn* Pawn = NewObject<ACrapsPawn>();
+	TestNotNull(TEXT("Pawn instantiated"), Pawn);
+	if (!Pawn)
+	{
+		return false;
+	}
+
+	// 1. Verify Left-Hand Anchor is positioned in front of the default camera (X=85, Y=-24, Z=132)
+	TestNotNull(TEXT("LeftHandRailAnchor exists"), Pawn->LeftHandRailAnchor.Get());
+	if (Pawn->LeftHandRailAnchor)
+	{
+		const FVector RelLoc = Pawn->LeftHandRailAnchor->GetRelativeLocation();
+		TestEqual(TEXT("Anchor X is 85cm"), RelLoc.X, 85.0);
+		TestEqual(TEXT("Anchor Y is -24cm"), RelLoc.Y, -24.0);
+		TestEqual(TEXT("Anchor Z is 132cm"), RelLoc.Z, 132.0);
+	}
+
+	// 2. Verify Hand Sub-object Components exist
+	TestNotNull(TEXT("LeftForearmMesh exists"), Pawn->LeftForearmMesh.Get());
+	TestNotNull(TEXT("LeftWristMesh exists"), Pawn->LeftWristMesh.Get());
+	TestNotNull(TEXT("LeftPalmMesh exists"), Pawn->LeftPalmMesh.Get());
+	TestNotNull(TEXT("LeftRailPropMesh exists"), Pawn->LeftRailPropMesh.Get());
+	TestEqual(TEXT("LeftFingerMeshes count is 4"), Pawn->LeftFingerMeshes.Num(), 4);
+	TestEqual(TEXT("LeftRingMeshes count is 4"), Pawn->LeftRingMeshes.Num(), 4);
+
+	// 3. Verify Free-Look Toggle
+	TestFalse(TEXT("bIsFreeLooking is initially false"), Pawn->IsFreeLooking());
+	Pawn->Input_FreeLookPress();
+	TestTrue(TEXT("bIsFreeLooking is true after press"), Pawn->IsFreeLooking());
+	Pawn->Input_FreeLookRelease();
+	TestFalse(TEXT("bIsFreeLooking is false after release"), Pawn->IsFreeLooking());
+
+	// 4. Verify Socket World Locations are forward of origin (+X > 0)
+	for (int32 i = 0; i < 4; ++i)
+	{
+		const FVector KnuckleLoc = Pawn->GetFingerKnuckleWorldLocation(i);
+		TestTrue(TEXT("Knuckle location is forward of pawn"), KnuckleLoc.X > 0.0f);
+	}
+	const FVector WristLoc = Pawn->GetWristWorldLocation();
+	TestTrue(TEXT("Wrist location is forward of pawn"), WristLoc.X > 0.0f);
+
+	const FVector PropLoc = Pawn->GetRailPropWorldLocation(0);
+	TestTrue(TEXT("Prop location is forward of pawn"), PropLoc.X > 0.0f);
 
 	return true;
 }

@@ -9,6 +9,8 @@
 #include "Table/CrapsFlyingChipActor.h"
 #include "Progression/RunProgressionSubsystem.h"
 #include "Items/TrinketInventoryComponent.h"
+#include "Items/PDA_Trinket.h"
+#include "Materials/MaterialInstanceDynamic.h"
 #include "UI/CrapsDebugHUD.h"
 #include "Hazards/TableHazard.h"
 #include "Camera/CameraComponent.h"
@@ -39,11 +41,11 @@ ACrapsPawn::ACrapsPawn()
 	POVCamera->SetRelativeRotation(FRotator(-27.0f, 0.0f, 0.0f));
 	POVCamera->FieldOfView = 82.0f;
 
-	// Left-Hand Anchor resting on bottom-left leather rail
+	// Left-Hand Anchor resting visibly on the bottom-left leather rail in front of the camera (Milestone 3.1 & 3.2)
 	LeftHandRailAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("LeftHandRailAnchor"));
 	LeftHandRailAnchor->SetupAttachment(PawnRoot);
-	LeftHandRailAnchor->SetRelativeLocation(FVector(20.0f, -55.0f, 127.0f));
-	LeftHandRailAnchor->SetRelativeRotation(FRotator(0.0f, 15.0f, 0.0f));
+	LeftHandRailAnchor->SetRelativeLocation(FVector(85.0f, -24.0f, 132.0f));
+	LeftHandRailAnchor->SetRelativeRotation(FRotator(10.0f, 22.0f, -6.0f));
 
 	// Right-Hand Shooter Anchor above the staging zone
 	RightHandShooterAnchor = CreateDefaultSubobject<USceneComponent>(TEXT("RightHandShooterAnchor"));
@@ -53,16 +55,72 @@ ACrapsPawn::ACrapsPawn()
 
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
 
-	// Visible Graybox Left Hand (Forearm + Palm resting on Left Rail with Ring Socket indicators)
+	// Legacy LeftHandVisualMesh kept hidden
 	LeftHandVisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftHandVisualMesh"));
 	LeftHandVisualMesh->SetupAttachment(LeftHandRailAnchor);
-	if (CubeFinder.Succeeded())
-	{
-		LeftHandVisualMesh->SetStaticMesh(CubeFinder.Object);
-	}
-	LeftHandVisualMesh->SetRelativeScale3D(FVector(0.65f, 0.40f, 0.16f));
+	LeftHandVisualMesh->SetVisibility(false);
 	LeftHandVisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 1. Forearm (Charcoal Titanium Cyber-Forearm extending into view)
+	LeftForearmMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftForearmMesh"));
+	LeftForearmMesh->SetupAttachment(LeftHandRailAnchor);
+	if (CubeFinder.Succeeded()) LeftForearmMesh->SetStaticMesh(CubeFinder.Object);
+	LeftForearmMesh->SetRelativeLocation(FVector(-22.0f, -4.0f, 6.0f));
+	LeftForearmMesh->SetRelativeScale3D(FVector(0.38f, 0.16f, 0.14f));
+	LeftForearmMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 2. Wristwear Cyber-Chrono Cuff
+	LeftWristMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftWristMesh"));
+	LeftWristMesh->SetupAttachment(LeftHandRailAnchor);
+	if (CylinderFinder.Succeeded()) LeftWristMesh->SetStaticMesh(CylinderFinder.Object);
+	LeftWristMesh->SetRelativeLocation(FVector(-4.0f, 0.0f, 3.5f));
+	LeftWristMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
+	LeftWristMesh->SetRelativeScale3D(FVector(0.16f, 0.16f, 0.08f));
+	LeftWristMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 3. Palm resting flat on the table rail
+	LeftPalmMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftPalmMesh"));
+	LeftPalmMesh->SetupAttachment(LeftHandRailAnchor);
+	if (CubeFinder.Succeeded()) LeftPalmMesh->SetStaticMesh(CubeFinder.Object);
+	LeftPalmMesh->SetRelativeLocation(FVector(6.0f, 0.0f, 0.0f));
+	LeftPalmMesh->SetRelativeScale3D(FVector(0.18f, 0.16f, 0.07f));
+	LeftPalmMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// 4. Fingers (4 cybernetic digits curling forward) & Rings (4 rings on knuckles)
+	const float FingerOffsetsY[4] = { 4.5f, 1.5f, -1.5f, -4.5f };
+	const float FingerOffsetsX[4] = { 15.0f, 16.0f, 15.0f, 13.0f };
+	const float FingerOffsetsZ[4] = { 0.5f, 1.0f, 0.5f, 0.0f };
+
+	for (int32 i = 0; i < 4; ++i)
+	{
+		UStaticMeshComponent* FingerMesh = CreateDefaultSubobject<UStaticMeshComponent>(*FString::Printf(TEXT("LeftFingerMesh_%d"), i));
+		FingerMesh->SetupAttachment(LeftHandRailAnchor);
+		if (CylinderFinder.Succeeded()) FingerMesh->SetStaticMesh(CylinderFinder.Object);
+		FingerMesh->SetRelativeLocation(FVector(FingerOffsetsX[i] + 4.0f, FingerOffsetsY[i], FingerOffsetsZ[i] - 1.5f));
+		FingerMesh->SetRelativeRotation(FRotator(25.0f, 0.0f, 0.0f));
+		FingerMesh->SetRelativeScale3D(FVector(0.05f, 0.05f, 0.10f));
+		FingerMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		LeftFingerMeshes.Add(FingerMesh);
+
+		UStaticMeshComponent* RingMesh = CreateDefaultSubobject<UStaticMeshComponent>(*FString::Printf(TEXT("LeftRingMesh_%d"), i));
+		RingMesh->SetupAttachment(LeftHandRailAnchor);
+		if (CylinderFinder.Succeeded()) RingMesh->SetStaticMesh(CylinderFinder.Object);
+		RingMesh->SetRelativeLocation(FVector(FingerOffsetsX[i], FingerOffsetsY[i], FingerOffsetsZ[i]));
+		RingMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
+		RingMesh->SetRelativeScale3D(FVector(0.07f, 0.07f, 0.04f));
+		RingMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		LeftRingMeshes.Add(RingMesh);
+	}
+
+	// 5. Rail Prop (Whiskey tumbler / Ashtray totem resting on rail)
+	LeftRailPropMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftRailPropMesh"));
+	LeftRailPropMesh->SetupAttachment(LeftHandRailAnchor);
+	if (CylinderFinder.Succeeded()) LeftRailPropMesh->SetStaticMesh(CylinderFinder.Object);
+	LeftRailPropMesh->SetRelativeLocation(FVector(6.0f, -14.0f, 3.0f));
+	LeftRailPropMesh->SetRelativeScale3D(FVector(0.10f, 0.10f, 0.14f));
+	LeftRailPropMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// Visible Graybox Right Hand (Active Shooter Hand hovering beside the dice)
 	RightHandVisualMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RightHandVisualMesh"));
@@ -151,6 +209,13 @@ void ACrapsPawn::BeginPlay()
 	}
 
 	InitializeDefaultTrinketLoadout();
+
+	if (TrinketInventory)
+	{
+		TrinketInventory->OnTrinketEquipped.AddDynamic(this, &ACrapsPawn::HandleTrinketEquippedVisual);
+		TrinketInventory->OnTrinketUnequipped.AddDynamic(this, &ACrapsPawn::HandleTrinketUnequippedVisual);
+	}
+	UpdateTrinketVisuals();
 }
 
 void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -248,11 +313,38 @@ void ACrapsPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent
 	PlayerInputComponent->BindKey(EKeys::PageUp, IE_Pressed, this, &ACrapsPawn::Input_StationNext);
 	PlayerInputComponent->BindKey(EKeys::PageDown, IE_Pressed, this, &ACrapsPawn::Input_StationPrev);
 	PlayerInputComponent->BindKey(EKeys::M, IE_Pressed, this, &ACrapsPawn::Input_StationNext);
+
+	// Camera Free-Look / Glance Mode (Hold Middle Mouse Button or Left Alt)
+	PlayerInputComponent->BindKey(EKeys::MiddleMouseButton, IE_Pressed, this, &ACrapsPawn::Input_FreeLookPress);
+	PlayerInputComponent->BindKey(EKeys::MiddleMouseButton, IE_Released, this, &ACrapsPawn::Input_FreeLookRelease);
+	PlayerInputComponent->BindKey(EKeys::LeftAlt, IE_Pressed, this, &ACrapsPawn::Input_FreeLookPress);
+	PlayerInputComponent->BindKey(EKeys::LeftAlt, IE_Released, this, &ACrapsPawn::Input_FreeLookRelease);
 }
 
 void ACrapsPawn::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+
+	// ---- Free-Look Mouse Input Accumulation & Smoothing (MMB / Alt Glance) ----
+	if (bIsFreeLooking)
+	{
+		if (APlayerController* PC = Cast<APlayerController>(GetController()))
+		{
+			float MouseDeltaX = 0.0f;
+			float MouseDeltaY = 0.0f;
+			PC->GetInputMouseDelta(MouseDeltaX, MouseDeltaY);
+
+			const float LookSensitivity = 0.22f;
+			FreeLookYaw = FMath::Clamp(FreeLookYaw + (MouseDeltaX * LookSensitivity), -50.0f, 50.0f);
+			FreeLookPitch = FMath::Clamp(FreeLookPitch - (MouseDeltaY * LookSensitivity), -40.0f, 30.0f);
+		}
+	}
+	else
+	{
+		// Smoothly spring back to neutral perspective when glance key is released
+		FreeLookYaw = FMath::FInterpTo(FreeLookYaw, 0.0f, DeltaTime, 8.0f);
+		FreeLookPitch = FMath::FInterpTo(FreeLookPitch, 0.0f, DeltaTime, 8.0f);
+	}
 
 	// ---- Dynamic Look-Down / Pan / Zoom Camera Behavior (Task 3.2) ----
 	if (POVCamera && TableActor && TableActor->ShooterStations.IsValidIndex(CurrentStationIndex))
@@ -269,8 +361,6 @@ void ACrapsPawn::Tick(float DeltaTime)
 			// Natural first-person view of the table, near rail, and staged dice
 			TargetCamRot = Station.SettingCameraLocalRot;
 			TargetFOV = 82.0f;
-			POVCamera->SetRelativeRotation(FMath::RInterpTo(POVCamera->GetRelativeRotation(), TargetCamRot, DeltaTime, 8.0f));
-			POVCamera->FieldOfView = FMath::FInterpTo(POVCamera->FieldOfView, TargetFOV, DeltaTime, 8.0f);
 			break;
 		}
 
@@ -279,8 +369,6 @@ void ACrapsPawn::Tick(float DeltaTime)
 			// Pan toward the target back wall with aim yaw offset
 			TargetCamRot = Station.ThrowCameraLocalRot + FRotator(0.0f, CurrentLaunchParams.AimYawOffsetDegrees, 0.0f);
 			TargetFOV = 82.0f;
-			POVCamera->SetRelativeRotation(FMath::RInterpTo(POVCamera->GetRelativeRotation(), TargetCamRot, DeltaTime, 8.0f));
-			POVCamera->FieldOfView = FMath::FInterpTo(POVCamera->FieldOfView, TargetFOV, DeltaTime, 8.0f);
 			break;
 		}
 
@@ -294,14 +382,20 @@ void ACrapsPawn::Tick(float DeltaTime)
 				const FVector CamWorldPos = POVCamera->GetComponentLocation();
 				const FRotator WorldLookAt = (DiceMidpoint - CamWorldPos).Rotation();
 				// Convert to pawn-local rotation
-				const FRotator LocalLookAt = (GetActorQuat().Inverse() * WorldLookAt.Quaternion()).Rotator();
-				POVCamera->SetRelativeRotation(FMath::RInterpTo(POVCamera->GetRelativeRotation(), LocalLookAt, DeltaTime, 7.5f));
+				TargetCamRot = (GetActorQuat().Inverse() * WorldLookAt.Quaternion()).Rotator();
 			}
 			TargetFOV = 48.0f;
-			POVCamera->FieldOfView = FMath::FInterpTo(POVCamera->FieldOfView, TargetFOV, DeltaTime, 4.5f);
 			break;
 		}
 		}
+
+		// Apply Free-Look Glance offset
+		TargetCamRot += FRotator(FreeLookPitch, FreeLookYaw, 0.0f);
+
+		const float InterpSpeed = (CurrentPhase == ECrapsThrowPhase::DiceInFlight) ? 7.5f : 8.0f;
+		const float FOVInterpSpeed = (CurrentPhase == ECrapsThrowPhase::DiceInFlight) ? 4.5f : 8.0f;
+		POVCamera->SetRelativeRotation(FMath::RInterpTo(POVCamera->GetRelativeRotation(), TargetCamRot, DeltaTime, InterpSpeed));
+		POVCamera->FieldOfView = FMath::FInterpTo(POVCamera->FieldOfView, TargetFOV, DeltaTime, FOVInterpSpeed);
 	}
 
 	switch (CurrentPhase)
@@ -470,30 +564,17 @@ void ACrapsPawn::Tick(float DeltaTime)
 		const FVector Fwd = PawnQ.GetForwardVector();
 		const FVector Right = PawnQ.GetRightVector();
 
-		// 1. LEFT HAND ANCHOR (Bottom-Left Rail): Forearm + 4 Ring Sockets + 1 Wristwear Socket
-		const FQuat LeftHandQ = PawnQ * FQuat(FRotator(0.0f, 15.0f, 0.0f));
-		const FVector LeftWristPos = PawnLocalToWorld(FVector(10.0f, -60.0f, 128.0f));
-		const FVector LeftPalmPos  = PawnLocalToWorld(FVector(30.0f, -50.0f, 127.0f));
-		DrawDebugBox(World, LeftWristPos, FVector(16.0f, 12.0f, 6.0f), LeftHandQ, FColor(0, 245, 212), false, -1.0f, 0, 2.2f);
-		DrawDebugBox(World, LeftPalmPos,  FVector(15.0f, 13.0f, 5.0f), LeftHandQ, FColor(0, 245, 212), false, -1.0f, 0, 2.2f);
-		DrawDebugSphere(World, LeftWristPos + FVector(0.0f, 0.0f, 7.0f), 6.5f, 12, FColor(255, 183, 3), false, -1.0f, 0, 2.0f);
-		for (int32 FingerIdx = 0; FingerIdx < 4; ++FingerIdx)
-		{
-			const float FingerY = -58.0f + (FingerIdx * 7.0f);
-			const FVector KnucklePos = PawnLocalToWorld(FVector(45.0f, FingerY, 126.0f));
-			const FVector TipPos     = PawnLocalToWorld(FVector(60.0f, FingerY + 3.0f, 122.0f));
-			DrawDebugLine(World, LeftPalmPos, KnucklePos, FColor(0, 245, 212), false, -1.0f, 0, 2.0f);
-			DrawDebugLine(World, KnucklePos, TipPos, FColor(0, 245, 212), false, -1.0f, 0, 2.0f);
-			DrawDebugSphere(World, KnucklePos, 3.5f, 8, FColor(255, 0, 127), false, -1.0f, 0, 1.8f);
-		}
+		// 1. LEFT HAND ANCHOR (Bottom-Left Rail): 3D Mesh Cyber-Rig (Milestone 3.1 & 3.2)
+		const FQuat LeftHandQ = LeftHandRailAnchor ? LeftHandRailAnchor->GetComponentQuat() : (PawnQ * FQuat(FRotator(0.0f, 15.0f, 0.0f)));
+		const FVector LeftWristPos = GetWristWorldLocation();
 
-		// Render equipped Trinkets on Left-Hand sockets (Milestone 3.1 & 3.2)
+		// Optional socket glow highlights for equipped Trinkets
 		if (TrinketInventory)
 		{
 			// Wristwear
 			if (UPDA_Trinket* WristTrinket = TrinketInventory->GetEquippedTrinket(ETrinketSlotType::WristwearActive, 0))
 			{
-				DrawDebugSphere(World, LeftWristPos + FVector(0.0f, 0.0f, 7.0f), 8.0f, 16, FColor(255, 215, 0), false, -1.0f, 0, 3.0f);
+				DrawDebugSphere(World, LeftWristPos + FVector(0.0f, 0.0f, 4.0f), 6.0f, 16, FColor(255, 215, 0), false, -1.0f, 0, 2.0f);
 			}
 
 			// 4 Finger Rings
@@ -502,7 +583,7 @@ void ACrapsPawn::Tick(float DeltaTime)
 				if (UPDA_Trinket* RingTrinket = TrinketInventory->GetEquippedTrinket(ETrinketSlotType::FingerRing, FingerIdx))
 				{
 					const FVector KnucklePos = GetFingerKnuckleWorldLocation(FingerIdx);
-					DrawDebugSphere(World, KnucklePos, 5.0f, 12, FColor(0, 245, 212), false, -1.0f, 0, 2.5f);
+					DrawDebugSphere(World, KnucklePos, 4.0f, 12, FColor(0, 245, 212), false, -1.0f, 0, 2.0f);
 				}
 			}
 
@@ -512,7 +593,7 @@ void ACrapsPawn::Tick(float DeltaTime)
 				if (UPDA_Trinket* PropTrinket = TrinketInventory->GetEquippedTrinket(ETrinketSlotType::RailProp, PropIdx))
 				{
 					const FVector PropPos = GetRailPropWorldLocation(PropIdx);
-					DrawDebugBox(World, PropPos, FVector(6.0f, 6.0f, 8.0f), LeftHandQ, FColor(255, 0, 128), false, -1.0f, 0, 2.5f);
+					DrawDebugBox(World, PropPos, FVector(5.0f, 5.0f, 6.0f), LeftHandQ, FColor(255, 0, 128), false, -1.0f, 0, 2.0f);
 				}
 			}
 		}
@@ -1093,6 +1174,12 @@ void ACrapsPawn::Input_ArchetypeF4() { SetActiveThrowArchetype(EThrowArchetype::
 
 void ACrapsPawn::Input_ThrowPress()
 {
+	// Suppress throw interactions while actively using Free-Look / Glance camera
+	if (bIsFreeLooking)
+	{
+		return;
+	}
+
 	// If the Betting Board is open, route click to HUD overlay (prevents throwing)
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
@@ -1343,6 +1430,12 @@ void ACrapsPawn::Input_ToggleBettingBoard()
 
 void ACrapsPawn::Input_RightClickPress()
 {
+	// Suppress table refund interactions while actively using Free-Look / Glance camera
+	if (bIsFreeLooking)
+	{
+		return;
+	}
+
 	if (APlayerController* PC = Cast<APlayerController>(GetController()))
 	{
 		if (ACrapsDebugHUD* HUD = Cast<ACrapsDebugHUD>(PC->GetHUD()))
@@ -1439,6 +1532,16 @@ void ACrapsPawn::Input_CycleDenominationDown()
 
 void ACrapsPawn::UpdateCursorHoverRaycast()
 {
+	if (bIsFreeLooking)
+	{
+		if (HoveredBetZone)
+		{
+			HoveredBetZone->SetHovered(false);
+			HoveredBetZone = nullptr;
+		}
+		return;
+	}
+
 	APlayerController* PC = Cast<APlayerController>(GetController());
 
 	// If betting board is open, do not raycast or hover 3D table zones
@@ -1498,19 +1601,169 @@ void ACrapsPawn::UpdateCursorHoverRaycast()
 
 FVector ACrapsPawn::GetFingerKnuckleWorldLocation(int32 FingerIndex) const
 {
-	const float FingerY = -58.0f + (FMath::Clamp(FingerIndex, 0, 3) * 7.0f);
-	return PawnLocalToWorld(FVector(45.0f, FingerY, 126.0f));
+	const int32 ClampedIndex = FMath::Clamp(FingerIndex, 0, 3);
+	if (LeftRingMeshes.IsValidIndex(ClampedIndex) && LeftRingMeshes[ClampedIndex] && LeftRingMeshes[ClampedIndex]->IsRegistered())
+	{
+		return LeftRingMeshes[ClampedIndex]->GetComponentLocation();
+	}
+	if (LeftHandRailAnchor)
+	{
+		const FTransform AnchorLocalXf(LeftHandRailAnchor->GetRelativeRotation(), LeftHandRailAnchor->GetRelativeLocation());
+		const FVector RelOffset = (LeftRingMeshes.IsValidIndex(ClampedIndex) && LeftRingMeshes[ClampedIndex])
+			? LeftRingMeshes[ClampedIndex]->GetRelativeLocation()
+			: FVector(15.0f, -1.5f, 0.5f);
+		return PawnLocalToWorld(AnchorLocalXf.TransformPosition(RelOffset));
+	}
+	return PawnLocalToWorld(FVector(85.0f, -24.0f, 132.0f));
 }
 
 FVector ACrapsPawn::GetWristWorldLocation() const
 {
-	return PawnLocalToWorld(FVector(10.0f, -60.0f, 135.0f));
+	if (LeftWristMesh && LeftWristMesh->IsRegistered())
+	{
+		return LeftWristMesh->GetComponentLocation();
+	}
+	if (LeftHandRailAnchor)
+	{
+		const FTransform AnchorLocalXf(LeftHandRailAnchor->GetRelativeRotation(), LeftHandRailAnchor->GetRelativeLocation());
+		const FVector RelOffset = LeftWristMesh ? LeftWristMesh->GetRelativeLocation() : FVector(-4.0f, 0.0f, 3.5f);
+		return PawnLocalToWorld(AnchorLocalXf.TransformPosition(RelOffset));
+	}
+	return PawnLocalToWorld(FVector(80.0f, -24.0f, 135.0f));
 }
 
 FVector ACrapsPawn::GetRailPropWorldLocation(int32 PropIndex) const
 {
-	const float PropX = (PropIndex == 0) ? -10.0f : -25.0f;
-	return PawnLocalToWorld(FVector(PropX, -65.0f, 125.0f));
+	if (LeftRailPropMesh && LeftRailPropMesh->IsRegistered())
+	{
+		return LeftRailPropMesh->GetComponentLocation();
+	}
+	if (LeftHandRailAnchor)
+	{
+		const FTransform AnchorLocalXf(LeftHandRailAnchor->GetRelativeRotation(), LeftHandRailAnchor->GetRelativeLocation());
+		const FVector RelOffset = LeftRailPropMesh ? LeftRailPropMesh->GetRelativeLocation() : FVector(6.0f, -14.0f, 3.0f);
+		return PawnLocalToWorld(AnchorLocalXf.TransformPosition(RelOffset));
+	}
+	return PawnLocalToWorld(FVector(90.0f, -38.0f, 135.0f));
+}
+
+void ACrapsPawn::Input_FreeLookPress()
+{
+	bIsFreeLooking = true;
+	if (APlayerController* PC = Cast<APlayerController>(GetController()))
+	{
+		PC->bShowMouseCursor = false;
+		FInputModeGameOnly InputMode;
+		PC->SetInputMode(InputMode);
+	}
+}
+
+void ACrapsPawn::Input_FreeLookRelease()
+{
+	APlayerController* PC = Cast<APlayerController>(GetController());
+	if (PC)
+	{
+		const bool bStillHolding = PC->IsInputKeyDown(EKeys::MiddleMouseButton) || PC->IsInputKeyDown(EKeys::LeftAlt);
+		if (bStillHolding)
+		{
+			return;
+		}
+	}
+
+	bIsFreeLooking = false;
+	if (PC)
+	{
+		PC->bShowMouseCursor = true;
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(InputMode);
+	}
+}
+
+void ACrapsPawn::HandleTrinketEquippedVisual(UPDA_Trinket* /*Trinket*/, ETrinketSlotType /*SlotType*/, int32 /*SlotIndex*/)
+{
+	UpdateTrinketVisuals();
+}
+
+void ACrapsPawn::HandleTrinketUnequippedVisual(UPDA_Trinket* /*Trinket*/, ETrinketSlotType /*SlotType*/, int32 /*SlotIndex*/)
+{
+	UpdateTrinketVisuals();
+}
+
+void ACrapsPawn::UpdateTrinketVisuals()
+{
+	static UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
+	auto SetCompColor = [this](UStaticMeshComponent* Comp, const FLinearColor& Color)
+	{
+		if (!Comp)
+		{
+			return;
+		}
+		if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(Comp->GetMaterial(0)))
+		{
+			MID->SetVectorParameterValue(TEXT("Color"), Color);
+		}
+		else if (BaseMat)
+		{
+			UMaterialInstanceDynamic* NewMID = UMaterialInstanceDynamic::Create(BaseMat, this);
+			NewMID->SetVectorParameterValue(TEXT("Color"), Color);
+			Comp->SetMaterial(0, NewMID);
+		}
+	};
+
+	// 1. Cybernetic Hand Base Finish (Matte Charcoal Titanium & Gunmetal)
+	SetCompColor(LeftForearmMesh, FLinearColor(0.04f, 0.045f, 0.05f));
+	SetCompColor(LeftPalmMesh, FLinearColor(0.05f, 0.055f, 0.06f));
+	for (UStaticMeshComponent* FingerMesh : LeftFingerMeshes)
+	{
+		SetCompColor(FingerMesh, FLinearColor(0.08f, 0.085f, 0.09f));
+	}
+
+	// 2. Knuckle Rings (0 = Neon Cyan, 1 = Royal Cobalt, 2 = Synth Violet, 3 = Brilliant Gold)
+	const FLinearColor RingColors[4] = {
+		FLinearColor(0.0f, 0.85f, 1.0f),    // Index: Neon Signet (Cyan)
+		FLinearColor(0.12f, 0.40f, 1.0f),   // Middle: Cobalt Band (Royal Blue)
+		FLinearColor(0.75f, 0.15f, 0.95f),  // Ring: Amethyst / Synergies (Violet)
+		FLinearColor(1.0f, 0.78f, 0.10f)    // Pinky: High Roller (Brilliant Gold)
+	};
+
+	for (int32 i = 0; i < LeftRingMeshes.Num(); ++i)
+	{
+		if (!LeftRingMeshes[i])
+		{
+			continue;
+		}
+
+		const bool bEquipped = TrinketInventory && (TrinketInventory->GetEquippedTrinket(ETrinketSlotType::FingerRing, i) != nullptr);
+		LeftRingMeshes[i]->SetVisibility(bEquipped);
+		if (bEquipped)
+		{
+			SetCompColor(LeftRingMeshes[i], RingColors[FMath::Clamp(i, 0, 3)]);
+		}
+	}
+
+	// 3. Wristwear Cyber-Chrono Cuff (Amber)
+	if (LeftWristMesh)
+	{
+		const bool bWristEquipped = TrinketInventory && (TrinketInventory->GetEquippedTrinket(ETrinketSlotType::WristwearActive, 0) != nullptr);
+		LeftWristMesh->SetVisibility(bWristEquipped);
+		if (bWristEquipped)
+		{
+			SetCompColor(LeftWristMesh, FLinearColor(0.95f, 0.55f, 0.10f));
+		}
+	}
+
+	// 4. Rail Prop (Whiskey Tumbler - Glowing Amber)
+	if (LeftRailPropMesh)
+	{
+		const bool bPropEquipped = TrinketInventory && (TrinketInventory->GetEquippedTrinket(ETrinketSlotType::RailProp, 0) != nullptr);
+		LeftRailPropMesh->SetVisibility(bPropEquipped);
+		if (bPropEquipped)
+		{
+			SetCompColor(LeftRailPropMesh, FLinearColor(0.85f, 0.40f, 0.05f));
+		}
+	}
 }
 
 void ACrapsPawn::Input_ToggleStarterTrinkets()
@@ -1523,6 +1776,7 @@ void ACrapsPawn::Input_ToggleStarterTrinkets()
 	if (TrinketInventory->GetEquippedCount() > 0)
 	{
 		TrinketInventory->ClearAllTrinkets();
+		UpdateTrinketVisuals();
 		if (UWorld* World = GetWorld())
 		{
 			if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())
@@ -1534,6 +1788,7 @@ void ACrapsPawn::Input_ToggleStarterTrinkets()
 	else
 	{
 		InitializeDefaultTrinketLoadout();
+		UpdateTrinketVisuals();
 		if (UWorld* World = GetWorld())
 		{
 			if (ACrapsGameState* GS = World->GetGameState<ACrapsGameState>())

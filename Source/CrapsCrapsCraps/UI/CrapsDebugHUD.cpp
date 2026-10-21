@@ -62,8 +62,8 @@ void ACrapsDebugHUD::DrawHUD()
 	{
 		const float PanelX = 16.0f;
 		const float PanelY = 16.0f;
-		const float PanelW = 420.0f * UiScale;
-		const float PanelH = 340.0f * UiScale;
+		const float PanelW = 430.0f * UiScale;
+		const float PanelH = 380.0f * UiScale;
 
 		DrawRect(FLinearColor(0.015f, 0.015f, 0.035f, 0.85f), PanelX, PanelY, PanelW, PanelH);
 		DrawLine(PanelX, PanelY, PanelX + PanelW, PanelY, CyanColor, 1.5f);
@@ -126,11 +126,14 @@ void ACrapsDebugHUD::DrawHUD()
 
 		const int32 FrictionPct = FMath::RoundToInt(CrapsPawn->TableSurfaceFriction * 100.0f);
 		DrawRow(FString::Printf(TEXT("FRICTION [- / =]: %d%%"), FrictionPct), WhiteColor, 0.92f);
+
+		DrawRow(TEXT("FREE LOOK [Hold MMB / Alt]: Glance Pit & Rail"), GoldColor, 0.92f);
+		DrawRow(TEXT("TRINKETS [J]: Toggle Starter Rig"), CyanColor, 0.92f);
 	}
 	else
 	{
 		// Sleek minimal floating pill at bottom-left
-		const float PillW = (bStreamlinedHUD ? 640.0f : 740.0f) * UiScale;
+		const float PillW = (bStreamlinedHUD ? 660.0f : 780.0f) * UiScale;
 		const float PillH = 26.0f * UiScale;
 		const float PillX = 16.0f;
 		const float PillY = Canvas->SizeY - PillH - 12.0f;
@@ -152,11 +155,26 @@ void ACrapsDebugHUD::DrawHUD()
 		}
 		else
 		{
-			PillText = FString::Printf(TEXT("CHIP: [$%lld] (T/Wheel)  |  [B/Tab] Betting Board  |  [LMB/Space] Throw  |  [F] Bank  |  [X] Press All"),
+			PillText = FString::Printf(TEXT("CHIP: [$%lld] (T/Wheel)  |  [B/Tab] Board  |  [LMB/Space] Throw  |  [Hold MMB/Alt] Look  |  [J] Trinkets"),
 				CrapsPawn->SelectedChipDenomination);
 		}
 
 		DrawText(PillText, CyanColor, PillX + 8.0f * UiScale, PillY + 4.0f * UiScale, Font, 0.82f * UiScale, false);
+	}
+
+	// Free-Look Glance Status Overlay
+	if (CrapsPawn->IsFreeLooking())
+	{
+		const FString FreeLookMsg = TEXT("<< FREE LOOK ACTIVE >>  Move Mouse to Glance  |  Release MMB/Alt to Reset");
+		float MsgW = 0.0f;
+		float MsgH = 0.0f;
+		GetTextSize(FreeLookMsg, MsgW, MsgH, Font, 1.0f * UiScale);
+		const float BannerX = (Canvas->SizeX - MsgW) * 0.5f;
+		const float BannerY = 55.0f * UiScale;
+		DrawRect(FLinearColor(0.02f, 0.02f, 0.05f, 0.88f), BannerX - 14.0f, BannerY - 4.0f, MsgW + 28.0f, MsgH + 8.0f);
+		DrawLine(BannerX - 14.0f, BannerY - 4.0f, BannerX + MsgW + 14.0f, BannerY - 4.0f, GoldColor, 1.5f);
+		DrawLine(BannerX - 14.0f, BannerY + MsgH + 4.0f, BannerX + MsgW + 14.0f, BannerY + MsgH + 4.0f, GoldColor, 1.5f);
+		DrawText(FreeLookMsg, GoldColor, BannerX, BannerY, Font, 1.0f * UiScale, false);
 	}
 
 	// ========================================================================

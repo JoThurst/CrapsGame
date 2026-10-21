@@ -19,6 +19,7 @@ class UThrowStyle_BackWallWhip;
 class UThrowStyle_MechanicalPlunger;
 class ACrapsTableGrayboxActor;
 class ABetZone;
+class UPDA_Trinket;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(
 	FOnRollResolvedSignature,
@@ -61,6 +62,25 @@ public:
 	/** Graybox Left-Hand visual mesh resting on the left leather rail. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Components")
 	TObjectPtr<class UStaticMeshComponent> LeftHandVisualMesh;
+
+	/** Detailed Synth-Noir Left-Hand Cybernetic Components (Milestone 3.1 & 3.2). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Visuals")
+	TObjectPtr<class UStaticMeshComponent> LeftForearmMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Visuals")
+	TObjectPtr<class UStaticMeshComponent> LeftWristMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Visuals")
+	TObjectPtr<class UStaticMeshComponent> LeftPalmMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Visuals")
+	TArray<TObjectPtr<class UStaticMeshComponent>> LeftFingerMeshes;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Visuals")
+	TArray<TObjectPtr<class UStaticMeshComponent>> LeftRingMeshes;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Visuals")
+	TObjectPtr<class UStaticMeshComponent> LeftRailPropMesh;
 
 	/** Graybox Right-Hand visual mesh hovering beside the staged dice. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|Components")
@@ -294,8 +314,37 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Trinkets")
 	void Input_ToggleStarterTrinkets();
 
+	/** Updates dynamic emissive colors on Left Hand rings, wristwear, and rail props. */
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|Trinkets")
+	void UpdateTrinketVisuals();
+
+	//~ Free-Look Camera Mode (Hold MMB or Left Alt)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|FreeLook")
+	bool bIsFreeLooking = false;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|FreeLook")
+	float FreeLookYaw = 0.0f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Pawn|FreeLook")
+	float FreeLookPitch = 0.0f;
+
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|FreeLook")
+	void Input_FreeLookPress();
+
+	UFUNCTION(BlueprintCallable, Category = "Craps|Pawn|FreeLook")
+	void Input_FreeLookRelease();
+
+	UFUNCTION(BlueprintPure, Category = "Craps|Pawn|FreeLook")
+	bool IsFreeLooking() const { return bIsFreeLooking; }
+
 protected:
 	virtual void BeginPlay() override;
+
+	UFUNCTION()
+	void HandleTrinketEquippedVisual(UPDA_Trinket* Trinket, ETrinketSlotType SlotType, int32 SlotIndex);
+
+	UFUNCTION()
+	void HandleTrinketUnequippedVisual(UPDA_Trinket* Trinket, ETrinketSlotType SlotType, int32 SlotIndex);
 
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Craps|Pawn|Betting")
 	TObjectPtr<ABetZone> HoveredBetZone = nullptr;
