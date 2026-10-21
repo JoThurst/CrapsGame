@@ -7,6 +7,7 @@
 #include "Components/TextRenderComponent.h"
 #include "Engine/StaticMesh.h"
 #include "Materials/MaterialInstanceDynamic.h"
+#include "Table/CrapsFlyingChipActor.h"
 #include "DrawDebugHelpers.h"
 #include "UObject/ConstructorHelpers.h"
 
@@ -176,17 +177,18 @@ void ABetZone::RefreshVisuals()
 
 			if (UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial")))
 			{
+				FLinearColor BaseColor, InlayColor, StripeColor;
+				ACrapsFlyingChipActor::GetDenominationColors(PlacedWager, BaseColor, InlayColor, StripeColor);
+
 				const int32 NumMats = FMath::Max(1, Mesh->GetStaticMaterials().Num());
 				for (int32 Slot = 0; Slot < NumMats; ++Slot)
 				{
 					UMaterialInstanceDynamic* MID = UMaterialInstanceDynamic::Create(BaseMat, this);
 					if (MID)
 					{
-						FLinearColor ChipColor = AccentColor;
-						if (Slot == 1)
-						{
-							ChipColor = FMath::Lerp(AccentColor, FLinearColor::White, 0.4f);
-						}
+						FLinearColor ChipColor = BaseColor;
+						if (Slot == 1) ChipColor = InlayColor;
+						else if (Slot == 2) ChipColor = StripeColor;
 						MID->SetVectorParameterValue(TEXT("Color"), ChipColor);
 						ChipStackMesh->SetMaterial(Slot, MID);
 					}

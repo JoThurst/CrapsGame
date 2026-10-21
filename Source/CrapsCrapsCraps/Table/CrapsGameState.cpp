@@ -186,6 +186,34 @@ void ACrapsGameState::ResolveSettledRoll(
 				Die2FaceValue,
 				DontPassWinnings);
 
+			// Populate Seven-Out Breakdown for Balatro-style transparency
+			LastRollBreakdown = FRollScoringBreakdown();
+			LastRollBreakdown.Die1Value = Die1FaceValue;
+			LastRollBreakdown.Die2Value = Die2FaceValue;
+			LastRollBreakdown.RollSum = 7;
+			LastRollBreakdown.TotalBaseChips = DontPassWinnings;
+			LastRollBreakdown.FinalThrowMult = 1.0f;
+			LastRollBreakdown.FinalBetMult = 1.0f;
+			LastRollBreakdown.CombinedMult = 1.0f;
+			LastRollBreakdown.TotalPayout = DontPassWinnings;
+			LastRollBreakdown.bHasData = true;
+
+			FRollBreakdownItem SevenOutItem;
+			SevenOutItem.SourceName = TEXT("SEVEN-OUT!");
+			SevenOutItem.Detail = TEXT("Exposed unbanked pool wiped! Puck -> OFF");
+			SevenOutItem.AccentColor = FLinearColor(1.0f, 0.15f, 0.20f);
+			LastRollBreakdown.Steps.Add(SevenOutItem);
+
+			if (DontPassWinnings > 0)
+			{
+				FRollBreakdownItem DontPassItem;
+				DontPassItem.SourceName = TEXT("BET: DON'T PASS");
+				DontPassItem.Detail = FString::Printf(TEXT("+$%lld chips won and secured"), DontPassWinnings);
+				DontPassItem.ChipDelta = DontPassWinnings;
+				DontPassItem.AccentColor = FLinearColor(0.0f, 0.95f, 0.45f);
+				LastRollBreakdown.Steps.Add(DontPassItem);
+			}
+
 			// 4. Enqueue presentation steps for visual feedback
 			if (ScoringQueue)
 			{
@@ -230,13 +258,37 @@ void ACrapsGameState::ResolveSettledRoll(
 	// --- 1. Compute Authoritative Base Chips and Throw Multipliers ---
 	int32 AuthBaseChips = Die1ChipYield + Die2ChipYield;
 	float AuthThrowMult = 1.0f;
+	TArray<FRollBreakdownItem> BreakdownItems;
+
+	if (Die1ChipYield > 0 || Die2ChipYield > 0)
+	{
+		FRollBreakdownItem FaceItem;
+		FaceItem.SourceName = FString::Printf(TEXT("DICE FACES [%d] + [%d]"), Die1FaceValue, Die2FaceValue);
+		FaceItem.Detail = FString::Printf(TEXT("+%d chips from acrylic face yield"), Die1ChipYield + Die2ChipYield);
+		FaceItem.ChipDelta = Die1ChipYield + Die2ChipYield;
+		FaceItem.AccentColor = FLinearColor(0.95f, 0.85f, 0.25f);
+		BreakdownItems.Add(FaceItem);
+	}
+
 	if (bHitBackWall)
 	{
 		AuthThrowMult += 0.5f;
+		FRollBreakdownItem WallItem;
+		WallItem.SourceName = TEXT("ALLIGATOR BACK-WALL");
+		WallItem.Detail = TEXT("+0.5x Throw Mult (Hard Wall Contact)");
+		WallItem.MultiplierDelta = 0.5f;
+		WallItem.AccentColor = FLinearColor(1.0f, 0.25f, 0.30f);
+		BreakdownItems.Add(WallItem);
 	}
 	if (bIsHardway)
 	{
 		AuthThrowMult += 0.5f;
+		FRollBreakdownItem HardwayItem;
+		HardwayItem.SourceName = TEXT("SYMMETRIC HARDWAY");
+		HardwayItem.Detail = FString::Printf(TEXT("+0.5x Throw Mult (Pair %d-%d)"), Die1FaceValue, Die2FaceValue);
+		HardwayItem.MultiplierDelta = 0.5f;
+		HardwayItem.AccentColor = FLinearColor(0.85f, 0.20f, 0.95f);
+		BreakdownItems.Add(HardwayItem);
 	}
 
 	// Integrate mid-roll hazard chips & throw multipliers earned during flight
@@ -261,7 +313,8 @@ void ACrapsGameState::ResolveSettledRoll(
 			ScoringQueue,
 			TrinketBonusChips,
 			TrinketBonusThrowMult,
-			TrinketBetMultFactor);
+			TrinketBetMultFactor,
+			&BreakdownItems);
 	}
 
 	AuthBaseChips += TrinketBonusChips;
@@ -327,6 +380,13 @@ void ACrapsGameState::ResolveSettledRoll(
 			{
 				ScoringQueue->EnqueueScoringStep(ZoneStep);
 			}
+
+			FRollBreakdownItem BetItem;
+			BetItem.SourceName = FString::Printf(TEXT("BET: %s"), *Zone->GetZoneName());
+			BetItem.Detail = FString::Printf(TEXT("+$%lld Payout"), ZoneStep.BaseChipDelta);
+			BetItem.ChipDelta = ZoneStep.BaseChipDelta;
+			BetItem.AccentColor = FLinearColor(0.0f, 0.95f, 0.45f);
+			BreakdownItems.Add(BetItem);
 		}
 
 		// Fix: If a bet resolves (lost or won single-roll), clear the wager
@@ -382,6 +442,14 @@ void ACrapsGameState::ResolveSettledRoll(
 				ScoringQueue->EnqueueScoringStep(StreakStep);
 			}
 
+			FRollBreakdownItem StreakItem;
+			StreakItem.SourceName = FString::Printf(TEXT("POINT [%d] HIT!"), PreRollPoint);
+			StreakItem.Detail = FString::Printf(TEXT("+%d Chips, x%.2f Streak Mult"), StreakChips, StreakMultFactor);
+			StreakItem.ChipDelta = StreakChips;
+			StreakItem.MultiplierFactor = StreakMultFactor;
+			StreakItem.AccentColor = FLinearColor(1.0f, 0.85f, 0.15f);
+			BreakdownItems.Add(StreakItem);
+
 			CurrentPhase = ECrapsTablePhase::ComeOutRoll;
 			EstablishedPoint = 0;
 			OnTablePhaseChanged.Broadcast(CurrentPhase, EstablishedPoint);
@@ -400,6 +468,19 @@ void ACrapsGameState::ResolveSettledRoll(
 	const int64 AuthTotalChips = static_cast<int64>(AuthBaseChips) + AuthBetChipsTotal;
 	const double RawTotal = static_cast<double>(AuthTotalChips) * static_cast<double>(AuthThrowMult) * static_cast<double>(AuthBetMult);
 	const int64 AuthoritativePayout = FMath::Max<int64>(0, FMath::RoundToInt64(RawTotal));
+
+	// Populate Balatro-Style Breakdown
+	LastRollBreakdown = FRollScoringBreakdown();
+	LastRollBreakdown.Die1Value = Die1FaceValue;
+	LastRollBreakdown.Die2Value = Die2FaceValue;
+	LastRollBreakdown.RollSum = RollSum;
+	LastRollBreakdown.TotalBaseChips = AuthTotalChips;
+	LastRollBreakdown.FinalThrowMult = AuthThrowMult;
+	LastRollBreakdown.FinalBetMult = AuthBetMult;
+	LastRollBreakdown.CombinedMult = AuthThrowMult * AuthBetMult;
+	LastRollBreakdown.TotalPayout = AuthoritativePayout;
+	LastRollBreakdown.Steps = BreakdownItems;
+	LastRollBreakdown.bHasData = true;
 
 	UnbankedComboPool += AuthoritativePayout;
 	OnBankrollChanged.Broadcast(PlayerBankroll, UnbankedComboPool);

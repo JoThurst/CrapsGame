@@ -53,6 +53,7 @@ ACrapsPawn::ACrapsPawn()
 	RightHandShooterAnchor->SetRelativeLocation(FVector(165.0f, 30.0f, 35.0f));
 	RightHandShooterAnchor->SetRelativeRotation(FRotator(0.0f, -15.0f, 0.0f));
 
+	static ConstructorHelpers::FObjectFinder<UStaticMesh> CyberArmFinder(TEXT("/Game/Meshes/SM_CyberArm_Left.SM_CyberArm_Left"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CubeFinder(TEXT("/Engine/BasicShapes/Cube.Cube"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> SphereFinder(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	static ConstructorHelpers::FObjectFinder<UStaticMesh> CylinderFinder(TEXT("/Engine/BasicShapes/Cylinder.Cylinder"));
@@ -63,35 +64,48 @@ ACrapsPawn::ACrapsPawn()
 	LeftHandVisualMesh->SetVisibility(false);
 	LeftHandVisualMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 1. Forearm (Charcoal Titanium Cyber-Forearm extending into view)
+	const bool bHasCustomCyberArm = CyberArmFinder.Succeeded();
+
+	// 1. Forearm (Sculpted Synth-Noir Cybernetic Left Arm)
 	LeftForearmMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftForearmMesh"));
 	LeftForearmMesh->SetupAttachment(LeftHandRailAnchor);
-	if (CubeFinder.Succeeded()) LeftForearmMesh->SetStaticMesh(CubeFinder.Object);
-	LeftForearmMesh->SetRelativeLocation(FVector(-22.0f, -4.0f, 6.0f));
-	LeftForearmMesh->SetRelativeScale3D(FVector(0.38f, 0.16f, 0.14f));
+	if (bHasCustomCyberArm)
+	{
+		LeftForearmMesh->SetStaticMesh(CyberArmFinder.Object);
+		LeftForearmMesh->SetRelativeLocation(FVector(0.0f, 0.0f, 0.0f));
+		LeftForearmMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 0.0f));
+		LeftForearmMesh->SetRelativeScale3D(FVector(1.0f, 1.0f, 1.0f));
+	}
+	else
+	{
+		if (CubeFinder.Succeeded()) LeftForearmMesh->SetStaticMesh(CubeFinder.Object);
+		LeftForearmMesh->SetRelativeLocation(FVector(-22.0f, -4.0f, 6.0f));
+		LeftForearmMesh->SetRelativeScale3D(FVector(0.38f, 0.16f, 0.14f));
+	}
 	LeftForearmMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
 	// 2. Wristwear Cyber-Chrono Cuff
 	LeftWristMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftWristMesh"));
 	LeftWristMesh->SetupAttachment(LeftHandRailAnchor);
 	if (CylinderFinder.Succeeded()) LeftWristMesh->SetStaticMesh(CylinderFinder.Object);
-	LeftWristMesh->SetRelativeLocation(FVector(-4.0f, 0.0f, 3.5f));
+	LeftWristMesh->SetRelativeLocation(FVector(-2.0f, 0.0f, 4.0f));
 	LeftWristMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
-	LeftWristMesh->SetRelativeScale3D(FVector(0.16f, 0.16f, 0.08f));
+	LeftWristMesh->SetRelativeScale3D(FVector(0.12f, 0.12f, 0.05f));
 	LeftWristMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 3. Palm resting flat on the table rail
+	// 3. Palm resting flat on the table rail (fallback if no custom mesh)
 	LeftPalmMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("LeftPalmMesh"));
 	LeftPalmMesh->SetupAttachment(LeftHandRailAnchor);
 	if (CubeFinder.Succeeded()) LeftPalmMesh->SetStaticMesh(CubeFinder.Object);
 	LeftPalmMesh->SetRelativeLocation(FVector(6.0f, 0.0f, 0.0f));
 	LeftPalmMesh->SetRelativeScale3D(FVector(0.18f, 0.16f, 0.07f));
+	LeftPalmMesh->SetVisibility(!bHasCustomCyberArm);
 	LeftPalmMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	// 4. Fingers (4 cybernetic digits curling forward) & Rings (4 rings on knuckles)
-	const float FingerOffsetsY[4] = { 4.5f, 1.5f, -1.5f, -4.5f };
-	const float FingerOffsetsX[4] = { 15.0f, 16.0f, 15.0f, 13.0f };
-	const float FingerOffsetsZ[4] = { 0.5f, 1.0f, 0.5f, 0.0f };
+	// 4. Fingers & Knuckle Rings
+	const float FingerOffsetsY[4] = { 4.2f, 1.4f, -1.4f, -4.2f };
+	const float FingerOffsetsX[4] = { 12.8f, 13.8f, 12.8f, 11.0f };
+	const float FingerOffsetsZ[4] = { 2.8f, 3.0f, 2.8f, 2.4f };
 
 	for (int32 i = 0; i < 4; ++i)
 	{
@@ -101,6 +115,7 @@ ACrapsPawn::ACrapsPawn()
 		FingerMesh->SetRelativeLocation(FVector(FingerOffsetsX[i] + 4.0f, FingerOffsetsY[i], FingerOffsetsZ[i] - 1.5f));
 		FingerMesh->SetRelativeRotation(FRotator(25.0f, 0.0f, 0.0f));
 		FingerMesh->SetRelativeScale3D(FVector(0.05f, 0.05f, 0.10f));
+		FingerMesh->SetVisibility(!bHasCustomCyberArm);
 		FingerMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		LeftFingerMeshes.Add(FingerMesh);
 
@@ -109,7 +124,7 @@ ACrapsPawn::ACrapsPawn()
 		if (CylinderFinder.Succeeded()) RingMesh->SetStaticMesh(CylinderFinder.Object);
 		RingMesh->SetRelativeLocation(FVector(FingerOffsetsX[i], FingerOffsetsY[i], FingerOffsetsZ[i]));
 		RingMesh->SetRelativeRotation(FRotator(0.0f, 0.0f, 90.0f));
-		RingMesh->SetRelativeScale3D(FVector(0.07f, 0.07f, 0.04f));
+		RingMesh->SetRelativeScale3D(FVector(0.065f, 0.065f, 0.035f));
 		RingMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 		LeftRingMeshes.Add(RingMesh);
 	}
@@ -334,16 +349,17 @@ void ACrapsPawn::Tick(float DeltaTime)
 			float MouseDeltaY = 0.0f;
 			PC->GetInputMouseDelta(MouseDeltaX, MouseDeltaY);
 
-			const float LookSensitivity = 0.22f;
-			FreeLookYaw = FMath::Clamp(FreeLookYaw + (MouseDeltaX * LookSensitivity), -50.0f, 50.0f);
-			FreeLookPitch = FMath::Clamp(FreeLookPitch - (MouseDeltaY * LookSensitivity), -40.0f, 30.0f);
+			const float LookSensitivity = 0.55f;
+			FreeLookYaw = FMath::Clamp(FreeLookYaw + (MouseDeltaX * LookSensitivity), -55.0f, 55.0f);
+			// Inverted sign: Moving mouse forward/up pitches up; pulling back/down pitches down
+			FreeLookPitch = FMath::Clamp(FreeLookPitch + (MouseDeltaY * LookSensitivity), -45.0f, 35.0f);
 		}
 	}
 	else
 	{
-		// Smoothly spring back to neutral perspective when glance key is released
-		FreeLookYaw = FMath::FInterpTo(FreeLookYaw, 0.0f, DeltaTime, 8.0f);
-		FreeLookPitch = FMath::FInterpTo(FreeLookPitch, 0.0f, DeltaTime, 8.0f);
+		// Smoothly and swiftly spring back to neutral perspective when glance key is released
+		FreeLookYaw = FMath::FInterpTo(FreeLookYaw, 0.0f, DeltaTime, 12.0f);
+		FreeLookPitch = FMath::FInterpTo(FreeLookPitch, 0.0f, DeltaTime, 12.0f);
 	}
 
 	// ---- Dynamic Look-Down / Pan / Zoom Camera Behavior (Task 3.2) ----
@@ -1239,7 +1255,7 @@ void ACrapsPawn::Input_ThrowPress()
 						const FVector CamUp = POVCamera ? POVCamera->GetUpVector() : FVector::UpVector;
 						const FVector PlayerPos = CamLoc + (CamFwd * 55.0f) + (CamRight * 28.0f) - (CamUp * 16.0f);
 						const FVector ZonePos = HoveredBetZone->GetActorLocation() + FVector(0.0f, 0.0f, 14.0f);
-						ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 65.0f, 0.58f, FLinearColor(0.0f, 0.96f, 0.83f));
+						ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 65.0f, 0.58f, FLinearColor(0.0f, 0.96f, 0.83f), SelectedChipDenomination);
 
 						GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("BET +$%lld ON %s! Bankroll: $%lld"),
 							SelectedChipDenomination, *HoveredBetZone->GetZoneName(), GS->GetPlayerBankroll()));
@@ -1474,7 +1490,7 @@ void ACrapsPawn::Input_RightClickPress()
 					const FVector CamUp = POVCamera ? POVCamera->GetUpVector() : FVector::UpVector;
 					const FVector PlayerPos = CamLoc + (CamFwd * 55.0f) + (CamRight * 28.0f) - (CamUp * 16.0f);
 					const FVector ZonePos = HoveredBetZone->GetActorLocation() + FVector(0.0f, 0.0f, 14.0f);
-					ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 65.0f, 0.58f, FLinearColor(1.0f, 0.72f, 0.01f));
+					ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 65.0f, 0.58f, FLinearColor(1.0f, 0.72f, 0.01f), Refunded);
 
 					GS->SetLastRollOutcomeBanner(FString::Printf(TEXT("REFUNDED $%lld FROM %s! Bankroll: $%lld"),
 						Refunded, *HoveredBetZone->GetZoneName(), GS->GetPlayerBankroll()));
@@ -1694,13 +1710,13 @@ void ACrapsPawn::HandleTrinketUnequippedVisual(UPDA_Trinket* /*Trinket*/, ETrink
 void ACrapsPawn::UpdateTrinketVisuals()
 {
 	static UMaterialInterface* BaseMat = LoadObject<UMaterialInterface>(nullptr, TEXT("/Engine/BasicShapes/BasicShapeMaterial.BasicShapeMaterial"));
-	auto SetCompColor = [this](UStaticMeshComponent* Comp, const FLinearColor& Color)
+	auto SetCompColorSlot = [this](UStaticMeshComponent* Comp, int32 SlotIdx, const FLinearColor& Color)
 	{
 		if (!Comp)
 		{
 			return;
 		}
-		if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(Comp->GetMaterial(0)))
+		if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(Comp->GetMaterial(SlotIdx)))
 		{
 			MID->SetVectorParameterValue(TEXT("Color"), Color);
 		}
@@ -1708,16 +1724,30 @@ void ACrapsPawn::UpdateTrinketVisuals()
 		{
 			UMaterialInstanceDynamic* NewMID = UMaterialInstanceDynamic::Create(BaseMat, this);
 			NewMID->SetVectorParameterValue(TEXT("Color"), Color);
-			Comp->SetMaterial(0, NewMID);
+			Comp->SetMaterial(SlotIdx, NewMID);
 		}
 	};
 
-	// 1. Cybernetic Hand Base Finish (Matte Charcoal Titanium & Gunmetal)
-	SetCompColor(LeftForearmMesh, FLinearColor(0.04f, 0.045f, 0.05f));
-	SetCompColor(LeftPalmMesh, FLinearColor(0.05f, 0.055f, 0.06f));
-	for (UStaticMeshComponent* FingerMesh : LeftFingerMeshes)
+	// 1. Cybernetic Hand Finish
+	if (LeftForearmMesh && LeftForearmMesh->GetNumMaterials() >= 4)
 	{
-		SetCompColor(FingerMesh, FLinearColor(0.08f, 0.085f, 0.09f));
+		// Slot 0: Matte Charcoal Titanium Armor
+		SetCompColorSlot(LeftForearmMesh, 0, FLinearColor(0.035f, 0.040f, 0.045f));
+		// Slot 1: Brushed Gunmetal Joint Hydraulics
+		SetCompColorSlot(LeftForearmMesh, 1, FLinearColor(0.080f, 0.085f, 0.095f));
+		// Slot 2: Glowing Cyan Neon Power Conduit
+		SetCompColorSlot(LeftForearmMesh, 2, FLinearColor(0.0f, 0.85f, 1.0f));
+		// Slot 3: Brushed Brass / Gold Trim
+		SetCompColorSlot(LeftForearmMesh, 3, FLinearColor(1.0f, 0.78f, 0.12f));
+	}
+	else
+	{
+		SetCompColorSlot(LeftForearmMesh, 0, FLinearColor(0.04f, 0.045f, 0.05f));
+		SetCompColorSlot(LeftPalmMesh, 0, FLinearColor(0.05f, 0.055f, 0.06f));
+		for (UStaticMeshComponent* FingerMesh : LeftFingerMeshes)
+		{
+			SetCompColorSlot(FingerMesh, 0, FLinearColor(0.08f, 0.085f, 0.09f));
+		}
 	}
 
 	// 2. Knuckle Rings (0 = Neon Cyan, 1 = Royal Cobalt, 2 = Synth Violet, 3 = Brilliant Gold)
@@ -1739,7 +1769,7 @@ void ACrapsPawn::UpdateTrinketVisuals()
 		LeftRingMeshes[i]->SetVisibility(bEquipped);
 		if (bEquipped)
 		{
-			SetCompColor(LeftRingMeshes[i], RingColors[FMath::Clamp(i, 0, 3)]);
+			SetCompColorSlot(LeftRingMeshes[i], 0, RingColors[FMath::Clamp(i, 0, 3)]);
 		}
 	}
 
@@ -1750,7 +1780,7 @@ void ACrapsPawn::UpdateTrinketVisuals()
 		LeftWristMesh->SetVisibility(bWristEquipped);
 		if (bWristEquipped)
 		{
-			SetCompColor(LeftWristMesh, FLinearColor(0.95f, 0.55f, 0.10f));
+			SetCompColorSlot(LeftWristMesh, 0, FLinearColor(0.95f, 0.55f, 0.10f));
 		}
 	}
 
@@ -1761,7 +1791,7 @@ void ACrapsPawn::UpdateTrinketVisuals()
 		LeftRailPropMesh->SetVisibility(bPropEquipped);
 		if (bPropEquipped)
 		{
-			SetCompColor(LeftRailPropMesh, FLinearColor(0.85f, 0.40f, 0.05f));
+			SetCompColorSlot(LeftRailPropMesh, 0, FLinearColor(0.85f, 0.40f, 0.05f));
 		}
 	}
 }

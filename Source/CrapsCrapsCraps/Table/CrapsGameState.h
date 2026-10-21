@@ -124,6 +124,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Craps|GameState")
 	void SetLastRollOutcomeBanner(const FString& InBanner) { LastRollOutcomeBanner = InBanner; }
 
+	/** Returns the structured Balatro-style scoring breakdown for the last settled roll. */
+	UFUNCTION(BlueprintPure, Category = "Craps|Scoring")
+	const FRollScoringBreakdown& GetLastRollBreakdown() const { return LastRollBreakdown; }
+
 	const TArray<TObjectPtr<ABetZone>>& GetActiveBetZones() const { return ActiveBetZones; }
 
 	/** Refunds only legitimately refundable active wagers back to PlayerBankroll. */
@@ -187,6 +191,10 @@ protected:
 	/** Safe banked chips towards the current Pit Boss Ante Quota. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Economy")
 	int64 PlayerBankroll = 500;
+
+	/** Structured Balatro-style scoring breakdown for the last settled roll. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Scoring")
+	FRollScoringBreakdown LastRollBreakdown;
 
 	/** Unbanked combo pool riding on the table (wiped on Seven-Out!). */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Craps|Economy")

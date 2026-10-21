@@ -345,6 +345,78 @@ void ACrapsDebugHUD::DrawHUD()
 			GoldColor, ScoreX + 8.0f * UiScale, PillY + 5.0f * UiScale, Font, 0.90f * UiScale, false);
 	}
 
+	// Balatro-Style Neon Roll Breakdown Card (Milestone: Scoring Transparency)
+	if (CrapsGS && CrapsGS->GetLastRollBreakdown().bHasData)
+	{
+		const FRollScoringBreakdown& BD = CrapsGS->GetLastRollBreakdown();
+		const float CardW = (bStreamlinedHUD ? 360.0f : 430.0f) * UiScale;
+		const int32 NumSteps = BD.Steps.Num();
+		const float StepLineHeight = 17.0f * UiScale;
+		const float CardH = (92.0f + (NumSteps * StepLineHeight)) * UiScale;
+		const float CardX = Canvas->SizeX - CardW - 16.0f;
+		const float CardY = ScoreY + ScoreH + 38.0f;
+
+		// CRT Noir Glass Panel with Glowing Cyber Borders
+		DrawRect(FLinearColor(0.012f, 0.012f, 0.028f, 0.90f), CardX, CardY, CardW, CardH);
+		DrawLine(CardX, CardY, CardX + CardW, CardY, CyanColor, 1.5f);
+		DrawLine(CardX, CardY + CardH, CardX + CardW, CardY + CardH, GoldColor, 1.5f);
+		DrawLine(CardX, CardY, CardX, CardY + CardH, CyanColor, 1.5f);
+		DrawLine(CardX + CardW, CardY, CardX + CardW, CardY + CardH, GoldColor, 1.5f);
+
+		float CurY = CardY + 8.0f * UiScale;
+		const float MarginLeft = CardX + 12.0f * UiScale;
+
+		// 1. Header: ROLL RESULT [Die1] + [Die2] = RollSum
+		DrawText(
+			FString::Printf(TEXT("ROLL BREAKDOWN // [%d] + [%d] = %d"), BD.Die1Value, BD.Die2Value, BD.RollSum),
+			CyanColor, MarginLeft, CurY, Font, 0.94f * UiScale, false);
+		CurY += 20.0f * UiScale;
+
+		// 2. Base Chips
+		DrawText(
+			FString::Printf(TEXT("BASE CHIPS: %lld"), BD.TotalBaseChips),
+			GoldColor, MarginLeft, CurY, Font, 0.88f * UiScale, false);
+		CurY += 16.0f * UiScale;
+
+		DrawLine(MarginLeft, CurY, CardX + CardW - 12.0f * UiScale, CurY, FLinearColor(0.2f, 0.25f, 0.35f, 0.7f), 1.0f);
+		CurY += 6.0f * UiScale;
+
+		// 3. Contributing Multipliers & Bonuses (Balatro Jokers / Trinkets)
+		for (const FRollBreakdownItem& Item : BD.Steps)
+		{
+			FString BonusStr;
+			if (Item.MultiplierDelta > 0.0f)
+			{
+				BonusStr = FString::Printf(TEXT("+%.1fx"), Item.MultiplierDelta);
+			}
+			else if (Item.MultiplierFactor > 1.0f)
+			{
+				BonusStr = FString::Printf(TEXT("x%.1f"), Item.MultiplierFactor);
+			}
+			else if (Item.ChipDelta > 0)
+			{
+				BonusStr = FString::Printf(TEXT("+%lld Chips"), Item.ChipDelta);
+			}
+
+			DrawText(FString::Printf(TEXT("• %s"), *Item.SourceName), Item.AccentColor, MarginLeft, CurY, Font, 0.80f * UiScale, false);
+			DrawText(BonusStr, GoldColor, CardX + CardW - 90.0f * UiScale, CurY, Font, 0.80f * UiScale, false);
+			CurY += StepLineHeight;
+		}
+
+		DrawLine(MarginLeft, CurY, CardX + CardW - 12.0f * UiScale, CurY, FLinearColor(0.2f, 0.25f, 0.35f, 0.7f), 1.0f);
+		CurY += 6.0f * UiScale;
+
+		// 4. Total Multiplier & Final Score Payout
+		DrawText(
+			FString::Printf(TEXT("TOTAL MULTIPLIER: %.2fx"), BD.CombinedMult),
+			MagentaColor, MarginLeft, CurY, Font, 0.88f * UiScale, false);
+		CurY += 16.0f * UiScale;
+
+		DrawText(
+			FString::Printf(TEXT("PAYOUT: %lld × %.2fx = +%lld CHIPS"), BD.TotalBaseChips, BD.CombinedMult, BD.TotalPayout),
+			GoldColor, MarginLeft, CurY, Font, 0.94f * UiScale, false);
+	}
+
 	// Project floating 3D pop-up text in world space above the dice
 	if (ScoringQueue)
 	{
@@ -875,7 +947,7 @@ bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bI
 						if (CrapsGS->PlaceWager(TargetZone, Denom))
 						{
 							TargetZone->TriggerWinPulse();
-							ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 65.0f, 0.58f, FLinearColor(0.0f, 0.96f, 0.83f));
+							ACrapsFlyingChipActor::SpawnChip(World, PlayerPos, ZonePos, 65.0f, 0.58f, FLinearColor(0.0f, 0.96f, 0.83f), Denom);
 							CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("BET +$%lld ON %s! Bankroll: $%lld"),
 								Denom, *TargetZone->GetZoneName(), CrapsGS->GetPlayerBankroll()));
 						}
@@ -895,7 +967,7 @@ bool ACrapsDebugHUD::HandleBettingBoardClick(const FVector2D& ScreenPos, bool bI
 						int64 Refunded = 0;
 						if (CrapsGS->RemoveWager(TargetZone, Denom, Refunded))
 						{
-							ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 65.0f, 0.58f, FLinearColor(1.0f, 0.72f, 0.01f));
+							ACrapsFlyingChipActor::SpawnChip(World, ZonePos, PlayerPos, 65.0f, 0.58f, FLinearColor(1.0f, 0.72f, 0.01f), Refunded);
 							CrapsGS->SetLastRollOutcomeBanner(FString::Printf(TEXT("REFUNDED $%lld FROM %s! Bankroll: $%lld"),
 								Refunded, *TargetZone->GetZoneName(), CrapsGS->GetPlayerBankroll()));
 						}

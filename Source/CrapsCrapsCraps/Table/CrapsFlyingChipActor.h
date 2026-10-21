@@ -22,6 +22,10 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
+	/** Returns standard casino color palette (Base, Inlay, Stripes) for a given denomination. */
+	UFUNCTION(BlueprintPure, Category = "Craps|Chips")
+	static void GetDenominationColors(int64 Denomination, FLinearColor& OutBase, FLinearColor& OutInlay, FLinearColor& OutStripe);
+
 	/** Initializes flight trajectory and appearance. */
 	UFUNCTION(BlueprintCallable, Category = "Craps|Chips")
 	void Launch(
@@ -29,7 +33,8 @@ public:
 		const FVector& InTargetPos,
 		float InArcHeight = 60.0f,
 		float InDuration = 0.58f,
-		const FLinearColor& InColor = FLinearColor(0.0f, 0.96f, 0.83f));
+		const FLinearColor& InColor = FLinearColor(0.0f, 0.96f, 0.83f),
+		int64 InDenomination = 0);
 
 	/** Spawns a single flying chip from Start to Target. */
 	UFUNCTION(BlueprintCallable, Category = "Craps|Chips", meta = (WorldContext = "World"))
@@ -39,7 +44,8 @@ public:
 		const FVector& TargetPos,
 		float ArcHeight = 60.0f,
 		float Duration = 0.58f,
-		const FLinearColor& Color = FLinearColor(0.0f, 0.96f, 0.83f));
+		const FLinearColor& Color = FLinearColor(0.0f, 0.96f, 0.83f),
+		int64 Denomination = 0);
 
 	/** Spawns a fountain cascade of glowing chips flying from table toward player POV on banking. */
 	UFUNCTION(BlueprintCallable, Category = "Craps|Chips", meta = (WorldContext = "World"))

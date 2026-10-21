@@ -316,4 +316,65 @@ bool FCrapsLeftHandVisualRigTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+// 8. Test Balatro-Style Roll Scoring Breakdown Data Structure & Accuracy
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FCrapsBalatroRollBreakdownTest, "Craps.Trinkets.BalatroRollBreakdownTransparency", EAutomationTestFlags::ApplicationContextMask | EAutomationTestFlags::ProductFilter)
+bool FCrapsBalatroRollBreakdownTest::RunTest(const FString& Parameters)
+{
+	ACrapsGameState* GS = NewObject<ACrapsGameState>();
+	TestNotNull(TEXT("GameState instantiated"), GS);
+	if (!GS)
+	{
+		return false;
+	}
+
+	UTrinketInventoryComponent* Inv = NewObject<UTrinketInventoryComponent>(GS);
+	GS->BindTrinketInventory(Inv);
+
+	// Equip Neon Signet (Odd sum -> +4.0x Throw Mult)
+	UPDA_Trinket* NeonSignet = NewObject<UPDA_Trinket>();
+	NeonSignet->TrinketName = FText::FromString(TEXT("Neon Signet"));
+	NeonSignet->SlotType = ETrinketSlotType::FingerRing;
+	NeonSignet->bSplitOddEven = true;
+	NeonSignet->OddSumThrowMult = 4.0f;
+	NeonSignet->EvenSumBaseChips = 40;
+	Inv->EquipTrinket(NeonSignet, 0);
+
+	// Roll 4 + 5 = 9 (Odd sum) with BackWall = true
+	// Base chips: 40 + 50 = 90
+	// Throw mult: 1.0 (base) + 0.5 (wall) + 4.0 (Neon Signet) = 5.5x
+	// Expected payout: 90 * 5.5 = 495
+	GS->ResolveSettledRoll(4, 40, FVector::ZeroVector, 5, 50, FVector::ZeroVector, true, 0);
+
+	const FRollScoringBreakdown& BD = GS->GetLastRollBreakdown();
+	TestTrue(TEXT("Breakdown has data"), BD.bHasData);
+	TestEqual(TEXT("Die1Value is 4"), BD.Die1Value, 4);
+	TestEqual(TEXT("Die2Value is 5"), BD.Die2Value, 5);
+	TestEqual(TEXT("RollSum is 9"), BD.RollSum, 9);
+	TestEqual(TEXT("TotalBaseChips is 90"), BD.TotalBaseChips, 90LL);
+	TestEqual(TEXT("FinalThrowMult is 5.5x"), BD.FinalThrowMult, 5.5f);
+	TestEqual(TEXT("TotalPayout is 495 chips"), BD.TotalPayout, 495LL);
+	TestTrue(TEXT("Steps array is populated with contributing bonuses"), BD.Steps.Num() >= 3);
+
+	// Verify step contents
+	bool bFoundNeonSignet = false;
+	bool bFoundWall = false;
+	for (const FRollBreakdownItem& Step : BD.Steps)
+	{
+		if (Step.SourceName.Contains(TEXT("Neon Signet")))
+		{
+			bFoundNeonSignet = true;
+			TestEqual(TEXT("Neon Signet multiplier is +4.0x"), Step.MultiplierDelta, 4.0f);
+		}
+		if (Step.SourceName.Contains(TEXT("BACK-WALL")))
+		{
+			bFoundWall = true;
+			TestEqual(TEXT("Wall multiplier is +0.5x"), Step.MultiplierDelta, 0.5f);
+		}
+	}
+	TestTrue(TEXT("Breakdown contains Neon Signet step"), bFoundNeonSignet);
+	TestTrue(TEXT("Breakdown contains Back-Wall step"), bFoundWall);
+
+	return true;
+}
+
 #endif // WITH_DEV_AUTOMATION_TESTS

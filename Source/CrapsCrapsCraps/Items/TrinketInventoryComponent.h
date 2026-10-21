@@ -66,13 +66,13 @@ public:
 	 * Evaluates all equipped trinkets against the current settled roll context,
 	 * enqueuing presentation scoring steps into UScoringQueueSubsystem and returning aggregated bonuses.
 	 */
-	UFUNCTION(BlueprintCallable, Category = "Craps|Trinkets")
 	void EvaluateTrinketsForRoll(
 		const FRollEvaluationContext& Context,
 		UScoringQueueSubsystem* ScoringQueue,
 		int32& OutTotalBonusChips,
 		float& OutTotalBonusThrowMult,
-		float& OutTotalBetMultFactor);
+		float& OutTotalBetMultFactor,
+		TArray<FRollBreakdownItem>* OutBreakdownItems = nullptr);
 
 	/** Checks if any equipped trinket averts a Seven-Out (e.g. Onyx Claw Miracle Seven). */
 	UFUNCTION(BlueprintCallable, Category = "Craps|Trinkets")

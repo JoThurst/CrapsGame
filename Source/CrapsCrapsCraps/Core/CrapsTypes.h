@@ -309,3 +309,69 @@ struct CRAPSCRAPSCRAPS_API FCrapsShooterStation
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Station")
 	FRotator ThrowCameraLocalRot = FRotator(-22.0f, 0.0f, 0.0f);
 };
+
+/**
+ * Detailed step contributor in the Balatro-style roll scoring breakdown.
+ */
+USTRUCT(BlueprintType)
+struct CRAPSCRAPSCRAPS_API FRollBreakdownItem
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	FString SourceName;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	FString Detail;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	float MultiplierDelta = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	float MultiplierFactor = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	int64 ChipDelta = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	FLinearColor AccentColor = FLinearColor::White;
+};
+
+/**
+ * Full Balatro-style mathematical scoring breakdown for the settled roll.
+ */
+USTRUCT(BlueprintType)
+struct CRAPSCRAPSCRAPS_API FRollScoringBreakdown
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	int32 Die1Value = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	int32 Die2Value = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	int32 RollSum = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	int64 TotalBaseChips = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	float FinalThrowMult = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	float FinalBetMult = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	float CombinedMult = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	int64 TotalPayout = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	TArray<FRollBreakdownItem> Steps;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Craps|Scoring")
+	bool bHasData = false;
+};

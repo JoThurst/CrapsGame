@@ -329,7 +329,8 @@ void UTrinketInventoryComponent::EvaluateTrinketsForRoll(
 	UScoringQueueSubsystem* ScoringQueue,
 	int32& OutTotalBonusChips,
 	float& OutTotalBonusThrowMult,
-	float& OutTotalBetMultFactor)
+	float& OutTotalBetMultFactor,
+	TArray<FRollBreakdownItem>* OutBreakdownItems)
 {
 	OutTotalBonusChips = 0;
 	OutTotalBonusThrowMult = 0.0f;
@@ -353,6 +354,33 @@ void UTrinketInventoryComponent::EvaluateTrinketsForRoll(
 			OutTotalBonusChips += StepChips;
 			OutTotalBonusThrowMult += StepThrowMult;
 			OutTotalBetMultFactor *= StepBetMult;
+
+			if (OutBreakdownItems)
+			{
+				FRollBreakdownItem Item;
+				Item.SourceName = Trinket->TrinketName.ToString();
+				Item.Detail = Step.StepLabel;
+				Item.MultiplierDelta = StepThrowMult;
+				Item.MultiplierFactor = StepBetMult;
+				Item.ChipDelta = StepChips;
+
+				switch (Trinket->SlotType)
+				{
+				case ETrinketSlotType::FingerRing:
+					Item.AccentColor = FLinearColor(0.0f, 0.85f, 1.0f);
+					break;
+				case ETrinketSlotType::WristwearActive:
+					Item.AccentColor = FLinearColor(0.95f, 0.55f, 0.10f);
+					break;
+				case ETrinketSlotType::RailProp:
+					Item.AccentColor = FLinearColor(0.85f, 0.40f, 0.05f);
+					break;
+				default:
+					Item.AccentColor = FLinearColor::White;
+					break;
+				}
+				OutBreakdownItems->Add(Item);
+			}
 
 			if (ScoringQueue)
 			{

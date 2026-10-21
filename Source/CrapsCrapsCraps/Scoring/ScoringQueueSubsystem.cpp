@@ -197,10 +197,12 @@ void UScoringQueueSubsystem::ApplyStepMath(FScoringStep& Step)
 	CurrentPitchSemitoneShift = FMath::Clamp(PoppedStepCountThisThrow, 1, 24);
 	Step.AudioPitchIndex = CurrentPitchSemitoneShift;
 
-	// Rising +1 semitone per popped step (12th root of 2 per semitone)
+	// Rising +1 semitone per popped step with acoustic micro-detune for satisfying casino tactile feedback
 	if (StepPopSound && GetWorld())
 	{
-		UGameplayStatics::PlaySound2D(GetWorld(), StepPopSound, 0.85f, FMath::Pow(2.0f, CurrentPitchSemitoneShift / 12.0f));
+		const float MicroJitter = FMath::FRandRange(0.97f, 1.03f);
+		const float PitchMultiplier = MicroJitter * FMath::Pow(2.0f, CurrentPitchSemitoneShift / 12.0f);
+		UGameplayStatics::PlaySound2D(GetWorld(), StepPopSound, 0.65f, PitchMultiplier);
 	}
 
 	RunningBaseChips = FMath::Max(0, RunningBaseChips + Step.BaseChipDelta);
