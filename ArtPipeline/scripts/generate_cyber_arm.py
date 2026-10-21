@@ -187,7 +187,7 @@ export_pipeline_path = os.path.join(EXPORT_DIR, "SM_CyberArm_Left.fbx")
 bpy.ops.export_scene.fbx(
     filepath=export_fbx_path,
     use_selection=True,
-    global_scale=1.0,
+    global_scale=0.01,
     apply_unit_scale=True,
     apply_scale_options='FBX_SCALE_NONE',
     axis_forward='-Z',
@@ -197,7 +197,7 @@ bpy.ops.export_scene.fbx(
 bpy.ops.export_scene.fbx(
     filepath=export_pipeline_path,
     use_selection=True,
-    global_scale=1.0,
+    global_scale=0.01,
     apply_unit_scale=True,
     apply_scale_options='FBX_SCALE_NONE',
     axis_forward='-Z',
